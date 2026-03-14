@@ -30,12 +30,16 @@
     "open_in_tab": true
   },
   "background": {
+    "scripts": ["background/background.js"],
     "service_worker": "background/background.js"
   },
   "browser_specific_settings": {
     "gecko": {
       "id": "vpn-cx-proxy@vpn-cx.net",
-      "strict_min_version": "109.0"
+      "strict_min_version": "126.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   }
 }

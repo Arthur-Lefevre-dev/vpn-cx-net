@@ -13,16 +13,29 @@ const archiver = require('archiver');
 const PROJECT_ROOT = path.join(__dirname, '..');
 const DIST_DIR = path.join(PROJECT_ROOT, 'dist');
 
-// Directories and files to include in the extension package
+// All paths referenced by manifest.json or at runtime must be included.
+// Optional: icons/ (extension works without it; toolbar uses default placeholder).
 const INCLUDED = [
-  'manifest.json',
-  'locales.js',
-  'background',
-  'popup',
-  'options',
-  'data',
-  'icons'
+  'manifest.json',   // required by both browsers
+  'locales.js',      // i18n, loaded by popup and options
+  'background',      // background/background.js (service_worker)
+  'popup',           // popup/popup.html, popup.css, popup.js
+  'options',         // options/options.html, options.css, options.js
+  'data',            // data/data.csv (default server list)
+  'icons'            // icons/icon16|32|48.png, icons/flags/*.png (optional)
 ];
+
+// Critical entries: build fails if missing. Optional entries only warn.
+const OPTIONAL = ['icons'];
+
+// Skip these when copying (keep zip clean)
+const SKIP_NAMES = new Set(['.DS_Store', 'Thumbs.db', '.gitkeep']);
+const SKIP_EXT = new Set(['.map']);
+function shouldSkip(name) {
+  if (SKIP_NAMES.has(name)) return true;
+  const ext = path.extname(name).toLowerCase();
+  return SKIP_EXT.has(ext);
+}
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
@@ -35,9 +48,11 @@ function copyRecursive(src, dest) {
   if (stat.isDirectory()) {
     ensureDir(dest);
     for (const name of fs.readdirSync(src)) {
+      if (shouldSkip(name)) continue;
       copyRecursive(path.join(src, name), path.join(dest, name));
     }
   } else {
+    if (shouldSkip(path.basename(src))) return;
     fs.copyFileSync(src, dest);
   }
 }
@@ -69,8 +84,11 @@ function main() {
   for (const name of INCLUDED) {
     const src = path.join(PROJECT_ROOT, name);
     if (!fs.existsSync(src)) {
-      if (name === 'icons') {
-        console.warn('  (icons/ not found, skipping)');
+      if (OPTIONAL.includes(name)) {
+        console.warn('  (optional ' + name + '/ not found, skipping)');
+      } else {
+        console.error('Error: required path missing:', name);
+        process.exit(1);
       }
       continue;
     }

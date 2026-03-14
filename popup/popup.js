@@ -239,10 +239,20 @@ if (serverSelectDropdown) {
 
 document.addEventListener('click', () => closeDropdown());
 
+/** Update only traffic values in the UI (for real-time refresh). */
+function updateTrafficDisplay(trafficStats) {
+  const traffic = trafficStats || {};
+  const down = traffic.downloadBytes != null ? traffic.downloadBytes : 0;
+  const up = traffic.uploadBytes != null ? traffic.uploadBytes : 0;
+  if (trafficDown) trafficDown.textContent = down > 0 ? formatBytes(down) : '—';
+  if (trafficUp) trafficUp.textContent = up > 0 ? formatBytes(up) : '—';
+  if (trafficTotal) trafficTotal.textContent = down + up > 0 ? formatBytes(down + up) : '—';
+}
+
 function loadState() {
   chrome.runtime.sendMessage({ action: 'getState' }, (state) => {
     if (chrome.runtime.lastError) {
-      statusText.textContent = 'Erreur';
+      if (statusText) statusText.textContent = 'Erreur';
       return;
     }
     renderState(state || {});
@@ -278,3 +288,28 @@ if (toggleBtn) {
 }
 
 loadState();
+
+// Refresh traffic stats every 2s while popup is open (real-time update)
+let trafficRefreshInterval = null;
+function startTrafficRefresh() {
+  if (trafficRefreshInterval) return;
+  trafficRefreshInterval = setInterval(() => {
+    chrome.runtime.sendMessage({ action: 'getTraffic' }, (data) => {
+      if (!chrome.runtime.lastError && data && data.trafficStats) {
+        updateTrafficDisplay(data.trafficStats);
+      }
+    });
+  }, 2000);
+}
+function stopTrafficRefresh() {
+  if (trafficRefreshInterval) {
+    clearInterval(trafficRefreshInterval);
+    trafficRefreshInterval = null;
+  }
+}
+startTrafficRefresh();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopTrafficRefresh();
+  else startTrafficRefresh();
+});
+window.addEventListener('pagehide', stopTrafficRefresh);

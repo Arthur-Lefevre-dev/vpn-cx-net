@@ -329,6 +329,10 @@ function getServersSource() {
 
 // Listen for messages from popup/options to toggle or update proxy
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.action === 'getTraffic') {
+    sendResponse({ trafficStats: { ...trafficStats } });
+    return false;
+  }
   if (message.action === 'getState') {
     getServersSource().then((dedicatedServers) => {
       chrome.storage.local.get(['enabled', 'host', 'port', 'type'], (data) => {

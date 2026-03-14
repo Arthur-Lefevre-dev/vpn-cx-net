@@ -1,0 +1,10 @@
+{
+  "name": "com.vpn_cx_proxy.openvpn",
+  "description": "VPN CX Proxy - OpenVPN start/stop",
+  "path": "ABSOLUTE_PATH_TO_OPENVPN_HOST",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://REPLACE_WITH_CHROME_EXTENSION_ID/",
+    "moz-extension://REPLACE_WITH_FIREFOX_EXTENSION_ID/"
+  ]
+}

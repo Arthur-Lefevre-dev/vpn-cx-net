@@ -1,40 +1,102 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Paramètres — VPN CX Proxy</title>
-  <link rel="stylesheet" href="options.css">
-</head>
-<body>
-  <div class="page">
-    <header class="header">
-      <h1>VPN CX Proxy</h1>
-      <p class="subtitle">OpenVPN</p>
-    </header>
-    <section class="openvpn-section" id="openvpnSection" aria-labelledby="openvpnTitle">
-      <h2 id="openvpnTitle" class="section-title">OpenVPN</h2>
-      <p class="help">Installez le « host natif » (voir README). Indiquez le chemin vers votre fichier <code>.ovpn</code>, puis démarrez ou arrêtez OpenVPN.</p>
-      <div class="field">
-        <label for="ovpnPath">Chemin du fichier .ovpn</label>
-        <input type="text" id="ovpnPath" name="ovpnPath" placeholder="C:\chemin\vers\config.ovpn" autocomplete="off">
-      </div>
-      <div class="actions">
-        <button type="button" id="openvpnStartBtn" class="btn btn-primary">Démarrer OpenVPN</button>
-        <button type="button" id="openvpnStopBtn" class="btn btn-secondary">Arrêter OpenVPN</button>
-      </div>
-      <p id="openvpnStatus" class="message openvpn-status" role="status" aria-live="polite"></p>
-      <div class="field" style="margin-top: 24px;">
-        <label for="decodoApiKey">Clé API Decodo (optionnel)</label>
-        <input type="password" id="decodoApiKey" placeholder="Liste des pays depuis l’API Decodo" autocomplete="off">
-        <p class="help">Si renseignée, la liste des pays du popup est chargée depuis l’API Decodo au lieu du fichier data.csv.</p>
-      </div>
-    </section>
-    <p id="message" class="message" role="alert" aria-live="polite" hidden></p>
-    <p class="credit">
-      Made by <a href="https://github.com/Arthur-Lefevre-dev" target="_blank" rel="noopener noreferrer">Arthur Lefevre</a>
-    </p>
-  </div>
-  <script src="options.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings — VPN CX Net</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <h1 id="optionsAppName">VPN CX Net</h1>
+        <p class="subtitle" id="optionsSubtitle">OpenVPN</p>
+      </header>
+      <section class="locale-section">
+        <label for="localeSelect" id="languageLabel">Language</label>
+        <select id="localeSelect" class="locale-select">
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+        </select>
+      </section>
+      <section
+        class="openvpn-section"
+        id="openvpnSection"
+        aria-labelledby="openvpnTitle"
+      >
+        <h2 id="openvpnTitle" class="section-title">OpenVPN</h2>
+        <p class="help" id="openvpnHelp">
+          Install the native host (see README). Enter the path to your .ovpn
+          file, then start or stop OpenVPN.
+        </p>
+        <div class="field">
+          <label for="ovpnPath" id="ovpnPathLabel">Path to .ovpn file</label>
+          <input
+            type="text"
+            id="ovpnPath"
+            name="ovpnPath"
+            placeholder="C:\path\to\config.ovpn"
+            autocomplete="off"
+          />
+        </div>
+        <div class="actions">
+          <button type="button" id="openvpnStartBtn" class="btn btn-primary">
+            Start OpenVPN
+          </button>
+          <button type="button" id="openvpnStopBtn" class="btn btn-secondary">
+            Stop OpenVPN
+          </button>
+        </div>
+        <p
+          id="openvpnStatus"
+          class="message openvpn-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <div class="field" style="margin-top: 24px">
+          <label for="decodoApiKey" id="decodoApiKeyLabel"
+            >Decodo API key (optional)</label
+          >
+          <input
+            type="password"
+            id="decodoApiKey"
+            placeholder="Liste des pays depuis l’API Decodo"
+            autocomplete="off"
+          />
+          <p class="help" id="decodoApiKeyHelp">
+            If set, the popup country list is loaded from the Decodo API instead
+            of data.csv.
+          </p>
+        </div>
+      </section>
+      <p
+        id="message"
+        class="message"
+        role="alert"
+        aria-live="polite"
+        hidden
+      ></p>
+      <p class="credit">
+        <span id="creditPrefix">Made by </span
+        ><a
+          href="https://github.com/Arthur-Lefevre-dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Arthur Lefevre</a
+        >
+      </p>
+      <p class="credit credit-coffee">
+        <a
+          href="https://www.buymeacoffee.com/llnxygv"
+          target="_blank"
+          rel="noopener noreferrer"
+          ><img
+            src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=llnxygv&button_colour=FF5F5F&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
+            alt="Buy me a coffee"
+        /></a>
+      </p>
+    </div>
+    <script src="../locales.js"></script>
+    <script src="options.js"></script>
+  </body>
 </html>

@@ -1,6 +1,6 @@
 {
   "name": "com.vpn_cx_proxy.openvpn",
-  "description": "VPN CX Proxy - OpenVPN start/stop",
+  "description": "VPN CX Net - OpenVPN start/stop",
   "path": "ABSOLUTE_PATH_TO_OPENVPN_HOST",
   "type": "stdio",
   "allowed_origins": [

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "VPN CX Proxy",
+  "name": "VPN CX Net",
   "version": "1.0.0",
   "description": "Configure and toggle HTTP/SOCKS proxy for Chrome and Firefox",
   "permissions": [
@@ -10,12 +10,10 @@
     "webRequest",
     "webRequestAuthProvider"
   ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "VPN CX Proxy",
+    "default_title": "VPN CX Net",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

@@ -1,4 +1,4 @@
-/* VPN CX Proxy - Popup styles */
+/* VPN CX Net - Popup styles */
 
 :root {
   --bg: #0f0f12;
@@ -41,17 +41,51 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  flex: 1;
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.header-lang {
+  margin-left: auto;
+}
+
+.locale-select {
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.locale-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .logo {
   font-size: 24px;
   line-height: 1;
-}
-
-.header h1 {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
 }
 
 .status {
@@ -265,7 +299,9 @@ body {
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .btn:disabled {
@@ -318,4 +354,34 @@ body {
 .credit a:hover {
   color: var(--primary);
   text-decoration: underline;
+}
+
+.support-block {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.support-message {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  line-height: 1.35;
+}
+
+.credit-coffee {
+  margin: 0;
+}
+
+.credit-coffee a {
+  display: inline-block;
+}
+
+.credit-coffee img {
+  height: 28px;
+  width: auto;
+  display: block;
+  border-radius: 6px;
+  margin: 0 auto;
 }

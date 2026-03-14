@@ -1,4 +1,4 @@
-# VPN CX Proxy
+# VPN CX Net
 
 Extension navigateur **Chrome** et **Firefox** pour configurer et activer/désactiver un proxy (HTTP, SOCKS4, SOCKS5). Idéal pour rediriger tout le trafic du navigateur via un serveur VPN ou proxy.
 
@@ -41,10 +41,13 @@ Le trafic du navigateur passera par le serveur configuré. Les identifiants Deco
 Sans clé API, le fichier **`data/data.csv`** définit la liste des serveurs (menu Pays).
 
 **Format Decodo (recommandé) — une ligne par serveur :**
+
 ```
 host:port:username:password
 ```
+
 Le pays est déduit du username (ex. `user-xxx-country-be` → Belgique). Exemple :
+
 ```
 isp.decodo.com:10001:user-sp1rg83e7n-country-be:laZqb7S~4bo8yJp6Eq
 isp.decodo.com:10002:user-sp1rg83e7n-country-es:laZqb7S~4bo8yJp6Eq
@@ -81,6 +84,7 @@ npm run build
 ```
 
 Les archives sont créées dans `dist/` :
+
 - **dist/vpn-cx-proxy-chrome.zip** — à envoyer sur le [Chrome Web Store](https://chrome.google.com/webstore/devconsole)
 - **dist/vpn-cx-proxy-firefox.zip** — à envoyer sur [addons.mozilla.org](https://addons.mozilla.org/developers/) (Firefox accepte le .zip ; il sera signé et diffusé en .xpi)
 

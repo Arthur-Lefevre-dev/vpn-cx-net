@@ -1,48 +1,101 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VPN CX Proxy</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="container">
-    <header class="header">
-      <span class="logo" aria-hidden="true">🔒</span>
-      <h1>VPN CX Proxy</h1>
-    </header>
-    <div class="current-country" id="currentCountry" aria-hidden="true">
-      <img class="current-country-flag" id="currentCountryFlag" alt="">
-      <span class="current-country-name" id="currentCountryName"></span>
-    </div>
-    <div class="traffic" id="trafficWrap">
-      <div class="traffic-row"><span class="traffic-label">↓ Descendant</span><span class="traffic-value" id="trafficDown">—</span></div>
-      <div class="traffic-row"><span class="traffic-label">↑ Montant</span><span class="traffic-value" id="trafficUp">—</span></div>
-      <div class="traffic-row traffic-total"><span class="traffic-label">Total</span><span class="traffic-value" id="trafficTotal">—</span></div>
-    </div>
-    <div class="status" id="status" role="status">
-      <span class="status-dot" id="statusDot"></span>
-      <span class="status-text" id="statusText">Chargement…</span>
-    </div>
-    <p class="proxy-info" id="proxyInfo" aria-live="polite"></p>
-    <div class="server-select-wrap" id="serverSelectWrap">
-      <label class="server-select-label">Pays</label>
-      <div class="server-select-trigger" id="serverSelectTrigger" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Choisir un pays">
-        <span class="server-select-value" id="serverSelectValue"></span>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VPN CX Net</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <span class="logo" aria-hidden="true">🔒</span>
+        <h1 id="appTitle">VPN CX Net</h1>
+        <div class="header-lang">
+          <label for="localeSelect" class="sr-only" id="localeLabel"
+            >Language</label
+          >
+          <select id="localeSelect" class="locale-select" aria-label="Language">
+            <option value="en">EN</option>
+            <option value="fr">FR</option>
+          </select>
+        </div>
+      </header>
+      <div class="current-country" id="currentCountry" aria-hidden="true">
+        <img class="current-country-flag" id="currentCountryFlag" alt="" />
+        <span class="current-country-name" id="currentCountryName"></span>
       </div>
-      <div class="server-select-dropdown" id="serverSelectDropdown" role="listbox" aria-hidden="true"></div>
+      <div class="traffic" id="trafficWrap">
+        <div class="traffic-row">
+          <span class="traffic-label" id="trafficLabelDown">↓ Download</span
+          ><span class="traffic-value" id="trafficDown">—</span>
+        </div>
+        <div class="traffic-row">
+          <span class="traffic-label" id="trafficLabelUp">↑ Upload</span
+          ><span class="traffic-value" id="trafficUp">—</span>
+        </div>
+        <div class="traffic-row traffic-total">
+          <span class="traffic-label" id="trafficLabelTotal">Total</span
+          ><span class="traffic-value" id="trafficTotal">—</span>
+        </div>
+      </div>
+      <div class="status" id="status" role="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">Loading…</span>
+      </div>
+      <p class="proxy-info" id="proxyInfo" aria-live="polite"></p>
+      <div class="server-select-wrap" id="serverSelectWrap">
+        <label class="server-select-label" id="countryLabel">Country</label>
+        <div
+          class="server-select-trigger"
+          id="serverSelectTrigger"
+          role="combobox"
+          aria-expanded="false"
+          aria-haspopup="listbox"
+        >
+          <span class="server-select-value" id="serverSelectValue"></span>
+        </div>
+        <div
+          class="server-select-dropdown"
+          id="serverSelectDropdown"
+          role="listbox"
+          aria-hidden="true"
+        ></div>
+      </div>
+      <div class="actions">
+        <button type="button" id="toggleBtn" class="btn btn-primary" disabled>
+          Enable proxy
+        </button>
+        <button type="button" id="optionsBtn" class="btn btn-secondary">
+          Settings
+        </button>
+      </div>
+      <p class="credit">
+        <span id="creditPrefix">Made by </span
+        ><a
+          href="https://github.com/Arthur-Lefevre-dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Arthur Lefevre</a
+        >
+      </p>
+      <div class="support-block">
+        <p class="support-message" id="supportMessage">
+          Want to support the project and get more features? You can donate:
+        </p>
+        <p class="credit-coffee">
+          <a
+            href="https://www.buymeacoffee.com/llnxygv"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><img
+              src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=llnxygv&button_colour=FF5F5F&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00"
+              alt="Buy me a coffee"
+          /></a>
+        </p>
+      </div>
     </div>
-    <div class="actions">
-      <button type="button" id="toggleBtn" class="btn btn-primary" disabled>
-        Activer le proxy
-      </button>
-      <button type="button" id="optionsBtn" class="btn btn-secondary">Paramètres</button>
-    </div>
-    <p class="credit">
-      Made by <a href="https://github.com/Arthur-Lefevre-dev" target="_blank" rel="noopener noreferrer">Arthur Lefevre</a>
-    </p>
-  </div>
-  <script src="popup.js"></script>
-</body>
+    <script src="../locales.js"></script>
+    <script src="popup.js"></script>
+  </body>
 </html>

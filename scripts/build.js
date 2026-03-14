@@ -16,6 +16,7 @@ const DIST_DIR = path.join(PROJECT_ROOT, 'dist');
 // Directories and files to include in the extension package
 const INCLUDED = [
   'manifest.json',
+  'locales.js',
   'background',
   'popup',
   'options',

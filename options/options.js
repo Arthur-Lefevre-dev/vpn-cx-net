@@ -1,5 +1,5 @@
 /**
- * Options page: OpenVPN only (+ optional Decodo API key).
+ * Options page: OpenVPN only (+ optional Decodo API key). Language selector.
  */
 
 const ovpnPathInput = document.getElementById('ovpnPath');
@@ -8,6 +8,7 @@ const openvpnStopBtn = document.getElementById('openvpnStopBtn');
 const openvpnStatus = document.getElementById('openvpnStatus');
 const decodoApiKeyInput = document.getElementById('decodoApiKey');
 const messageEl = document.getElementById('message');
+const localeSelect = document.getElementById('localeSelect');
 
 function showMessage(text, type) {
   if (messageEl) {
@@ -26,22 +27,46 @@ function setOpenVpnStatus(text, isError) {
   }
 }
 
+/** Apply current locale to all option page strings (call after setLocale). */
+function applyLocale() {
+  if (typeof getMessage === 'undefined') return;
+  const doc = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = getMessage(key); };
+  doc('optionsAppName', 'appName');
+  doc('optionsSubtitle', 'openvpn');
+  doc('languageLabel', 'languageLabel');
+  doc('openvpnTitle', 'openvpn');
+  doc('openvpnHelp', 'openvpnHelp');
+  doc('ovpnPathLabel', 'ovpnPathLabel');
+  doc('decodoApiKeyLabel', 'decodoApiKeyLabel');
+  doc('decodoApiKeyHelp', 'decodoApiKeyHelp');
+  doc('creditPrefix', 'madeBy');
+  if (ovpnPathInput) ovpnPathInput.placeholder = getMessage('ovpnPathPlaceholder');
+  if (decodoApiKeyInput) decodoApiKeyInput.placeholder = getMessage('decodoApiKeyPlaceholder');
+  if (openvpnStartBtn) openvpnStartBtn.textContent = getMessage('openvpnStart');
+  if (openvpnStopBtn) openvpnStopBtn.textContent = getMessage('openvpnStop');
+  document.title = getMessage('settingsTitle');
+}
+
 function loadOptions() {
-  chrome.storage.local.get(['ovpnPath', 'decodoApiKey'], (data) => {
+  chrome.storage.local.get(['ovpnPath', 'decodoApiKey', 'locale'], (data) => {
     if (ovpnPathInput) ovpnPathInput.value = data.ovpnPath || '';
     if (decodoApiKeyInput) decodoApiKeyInput.value = data.decodoApiKey || '';
+    if (typeof setLocale !== 'undefined') setLocale(data.locale || 'en');
+    applyLocale();
+    if (localeSelect) localeSelect.value = (data.locale === 'fr' ? 'fr' : 'en');
   });
 }
 
 if (openvpnStartBtn) {
   openvpnStartBtn.addEventListener('click', () => {
   const path = ovpnPathInput.value.trim();
+  const t = typeof getMessage !== 'undefined' ? getMessage : (k) => k;
   if (!path) {
-    setOpenVpnStatus('Indiquez le chemin du fichier .ovpn.', true);
+    setOpenVpnStatus(t('ovpnPathRequired'), true);
     return;
   }
   chrome.storage.local.set({ ovpnPath: path }, () => {});
-  setOpenVpnStatus('Démarrage…');
+  setOpenVpnStatus(t('openvpnStarting'));
   openvpnStartBtn.disabled = true;
   chrome.runtime.sendMessage({
     action: 'openvpnNative',
@@ -49,9 +74,9 @@ if (openvpnStartBtn) {
   }, (response) => {
     openvpnStartBtn.disabled = false;
     if (response && response.success) {
-      setOpenVpnStatus('OpenVPN démarré.');
+      setOpenVpnStatus(t('openvpnStarted'));
     } else {
-      setOpenVpnStatus((response && response.error) || 'Échec. Vérifiez que le host natif est installé (voir README).', true);
+      setOpenVpnStatus((response && response.error) || t('openvpnStartFailed'), true);
     }
   });
 });
@@ -59,7 +84,8 @@ if (openvpnStartBtn) {
 
 if (openvpnStopBtn) {
   openvpnStopBtn.addEventListener('click', () => {
-  setOpenVpnStatus('Arrêt…');
+  const t = typeof getMessage !== 'undefined' ? getMessage : (k) => k;
+  setOpenVpnStatus(t('openvpnStopping'));
   openvpnStopBtn.disabled = true;
   chrome.runtime.sendMessage({
     action: 'openvpnNative',
@@ -67,9 +93,9 @@ if (openvpnStopBtn) {
   }, (response) => {
     openvpnStopBtn.disabled = false;
     if (response && response.success) {
-      setOpenVpnStatus('OpenVPN arrêté.');
+      setOpenVpnStatus(t('openvpnStopped'));
     } else {
-      setOpenVpnStatus((response && response.error) || 'Échec ou OpenVPN n’était pas démarré.', true);
+      setOpenVpnStatus((response && response.error) || t('openvpnStopFailed'), true);
     }
   });
 });
@@ -78,6 +104,16 @@ if (openvpnStopBtn) {
 if (decodoApiKeyInput) {
   decodoApiKeyInput.addEventListener('blur', () => {
     chrome.storage.local.set({ decodoApiKey: decodoApiKeyInput.value.trim() }, () => {});
+  });
+}
+
+if (localeSelect) {
+  localeSelect.addEventListener('change', () => {
+    const locale = localeSelect.value === 'fr' ? 'fr' : 'en';
+    chrome.storage.local.set({ locale }, () => {
+      if (typeof setLocale !== 'undefined') setLocale(locale);
+      applyLocale();
+    });
   });
 }
 

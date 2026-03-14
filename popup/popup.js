@@ -17,14 +17,7 @@ const currentCountryName = document.getElementById('currentCountryName');
 const trafficDown = document.getElementById('trafficDown');
 const trafficUp = document.getElementById('trafficUp');
 const trafficTotal = document.getElementById('trafficTotal');
-
-const COUNTRY_NAMES = {
-  FR: 'France', US: 'États-Unis', GB: 'Royaume-Uni', DE: 'Allemagne', ES: 'Espagne',
-  IT: 'Italie', NL: 'Pays-Bas', BE: 'Belgique', CA: 'Canada', AU: 'Australie', JP: 'Japon',
-  BR: 'Brésil', IN: 'Inde', MX: 'Mexique', PL: 'Pologne', SE: 'Suède',
-  CH: 'Suisse', AT: 'Autriche', PT: 'Portugal', RU: 'Russie',
-  KR: 'Corée du Sud', SG: 'Singapour', HK: 'Hong Kong', TR: 'Turquie'
-};
+const localeSelect = document.getElementById('localeSelect');
 
 function flagIconUrl(countryCode) {
   if (!countryCode || countryCode.length !== 2) return '';
@@ -51,8 +44,7 @@ function createFlagImg(code) {
 }
 
 function countryName(server) {
-  const code = (server.countryCode || server.name || 'XX').toUpperCase();
-  return COUNTRY_NAMES[code] || code;
+  return typeof getCountryName !== 'undefined' ? getCountryName(serverCountryCode(server)) : serverCountryCode(server);
 }
 
 /** Get normalized country code from server object. */
@@ -87,7 +79,7 @@ function setSelectionDisplay(serverOrNull) {
       serverSelectValue.appendChild(createFlagImg(code));
       serverSelectValue.appendChild(document.createTextNode(' ' + countryName(serverOrNull)));
     } else {
-      serverSelectValue.textContent = '— Choisir un pays —';
+      serverSelectValue.textContent = typeof getMessage !== 'undefined' ? getMessage('chooseCountryPlaceholder') : '— Choose a country —';
     }
   }
 }
@@ -112,7 +104,7 @@ function renderState(state) {
     statusDot.classList.toggle('active', enabled);
     statusDot.classList.toggle('inactive', !enabled);
   }
-  if (statusText) statusText.textContent = enabled ? 'Proxy actif' : 'Proxy désactivé';
+  if (statusText) statusText.textContent = enabled ? (typeof getMessage !== 'undefined' ? getMessage('proxyActive') : 'Proxy active') : (typeof getMessage !== 'undefined' ? getMessage('proxyDisabled') : 'Proxy disabled');
 
   const traffic = state.trafficStats || {};
   const down = traffic.downloadBytes != null ? traffic.downloadBytes : 0;
@@ -151,7 +143,7 @@ function renderState(state) {
     defaultOpt.className = 'server-select-option server-select-option-default';
     defaultOpt.role = 'option';
     defaultOpt.dataset.index = '-1';
-    defaultOpt.textContent = '— Choisir un pays —';
+    defaultOpt.textContent = typeof getMessage !== 'undefined' ? getMessage('chooseCountryPlaceholder') : '— Choose a country —';
     serverSelectDropdown.appendChild(defaultOpt);
     servers.forEach((s, i) => {
       const opt = document.createElement('button');
@@ -169,13 +161,14 @@ function renderState(state) {
 
   if (toggleBtn) {
     toggleBtn.disabled = !hasConfig && !enabled;
+    const t = typeof getMessage !== 'undefined' ? getMessage : (k) => k;
     if (!hasConfig && !enabled) {
-      toggleBtn.textContent = 'Configurer dans Paramètres';
+      toggleBtn.textContent = t('configureInSettings');
     } else if (enabled) {
-      toggleBtn.textContent = 'Désactiver le proxy';
+      toggleBtn.textContent = t('disableProxy');
       toggleBtn.classList.add('off');
     } else {
-      toggleBtn.textContent = 'Activer le proxy';
+      toggleBtn.textContent = t('enableProxy');
       toggleBtn.classList.remove('off');
     }
   }
@@ -252,11 +245,36 @@ function updateTrafficDisplay(trafficStats) {
 function loadState() {
   chrome.runtime.sendMessage({ action: 'getState' }, (state) => {
     if (chrome.runtime.lastError) {
-      if (statusText) statusText.textContent = 'Erreur';
+      if (statusText) statusText.textContent = typeof getMessage !== 'undefined' ? getMessage('error') : 'Error';
       return;
     }
     renderState(state || {});
   });
+}
+
+/** Set static labels from current locale (call after setLocale). */
+function updateStaticLabels() {
+  if (typeof getMessage === 'undefined') return;
+  const appTitle = document.getElementById('appTitle');
+  if (appTitle) appTitle.textContent = getMessage('appName');
+  const trafficLabelDown = document.getElementById('trafficLabelDown');
+  if (trafficLabelDown) trafficLabelDown.textContent = getMessage('trafficDown');
+  const trafficLabelUp = document.getElementById('trafficLabelUp');
+  if (trafficLabelUp) trafficLabelUp.textContent = getMessage('trafficUp');
+  const trafficLabelTotal = document.getElementById('trafficLabelTotal');
+  if (trafficLabelTotal) trafficLabelTotal.textContent = getMessage('trafficTotal');
+  const countryLabel = document.getElementById('countryLabel');
+  if (countryLabel) countryLabel.textContent = getMessage('country');
+  if (serverSelectTrigger) serverSelectTrigger.setAttribute('aria-label', getMessage('chooseCountry'));
+  if (optionsBtn) optionsBtn.textContent = getMessage('settings');
+  const creditPrefix = document.getElementById('creditPrefix');
+  if (creditPrefix) creditPrefix.textContent = getMessage('madeBy');
+  if (statusText) statusText.textContent = getMessage('loading');
+  if (localeSelect) localeSelect.setAttribute('aria-label', getMessage('languageLabel'));
+  const localeLabel = document.getElementById('localeLabel');
+  if (localeLabel) localeLabel.textContent = getMessage('languageLabel');
+  const supportMessage = document.getElementById('supportMessage');
+  if (supportMessage) supportMessage.textContent = getMessage('supportMessage');
 }
 
 if (optionsBtn) {
@@ -287,7 +305,26 @@ if (toggleBtn) {
   });
 }
 
-loadState();
+// Load locale from storage (default: en), then init UI and state
+chrome.storage.local.get(['locale'], (data) => {
+  const locale = data.locale === 'fr' ? 'fr' : 'en';
+  if (typeof setLocale !== 'undefined') setLocale(locale);
+  if (localeSelect) localeSelect.value = locale;
+  updateStaticLabels();
+  loadState();
+  startTrafficRefresh();
+});
+
+if (localeSelect) {
+  localeSelect.addEventListener('change', () => {
+    const locale = localeSelect.value === 'fr' ? 'fr' : 'en';
+    chrome.storage.local.set({ locale }, () => {
+      if (typeof setLocale !== 'undefined') setLocale(locale);
+      updateStaticLabels();
+      loadState();
+    });
+  });
+}
 
 // Refresh traffic stats every 2s while popup is open (real-time update)
 let trafficRefreshInterval = null;
@@ -307,7 +344,6 @@ function stopTrafficRefresh() {
     trafficRefreshInterval = null;
   }
 }
-startTrafficRefresh();
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopTrafficRefresh();
   else startTrafficRefresh();

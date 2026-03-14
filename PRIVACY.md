@@ -1,51 +1,51 @@
-# Politique de confidentialité — VPN CX Net
+# Privacy Policy — VPN CX Net
 
-**Dernière mise à jour :** mars 2025
+**Last updated:** March 2025
 
-VPN CX Net (« l’extension ») respecte votre vie privée. Ce document décrit les données utilisées par l’extension et la façon dont elles sont traitées.
+VPN CX Net (“the extension”) respects your privacy. This document describes what data the extension uses and how it is handled.
 
-## Résumé
+## Summary
 
-- **Aucune donnée personnelle n’est collectée ni transmise** à nos serveurs ou à des tiers à des fins d’analyse ou de commercialisation.
-- Les réglages et préférences sont **stockés localement** dans votre navigateur (API de stockage de l’extension).
-- Les statistiques de trafic (volume descendant/montant) sont **calculées et affichées localement** ; elles ne sont pas envoyées à un serveur.
+- **No personal data is collected or transmitted** to our servers or to third parties for analysis or marketing.
+- Settings and preferences are **stored locally** in your browser (the extension’s storage API).
+- Traffic statistics (download/upload volume) are **computed and displayed locally**; they are not sent to any server.
 
-## Données stockées localement
+## Data stored locally
 
-L’extension utilise le stockage local du navigateur (Chrome `chrome.storage.local` / équivalent Firefox) uniquement pour :
+The extension uses the browser’s local storage (Chrome `chrome.storage.local` / Firefox equivalent) only for:
 
-- **État du proxy** : activé ou désactivé, adresse et port du serveur, type de proxy (HTTP, SOCKS, etc.).
-- **Préférences** : langue de l’interface (anglais/français).
-- **Option OpenVPN** : chemin du fichier `.ovpn` et statut, si vous utilisez la fonction « Démarrer / Arrêter OpenVPN » dans les paramètres.
-- **Option Decodo** : si vous renseignez une clé API Decodo dans les paramètres, celle-ci est conservée localement pour récupérer la liste des serveurs depuis l’API Decodo.
+- **Proxy state**: enabled or disabled, server address and port, proxy type (HTTP, SOCKS, etc.).
+- **Preferences**: interface language (English/French).
+- **OpenVPN option**: path to the `.ovpn` file and status, if you use the “Start / Stop OpenVPN” feature in Settings.
+- **Decodo option**: if you enter a Decodo API key in Settings, it is kept locally to fetch the server list from the Decodo API.
 
-Ces données **restent sur votre appareil** et ne sont pas envoyées à nos serveurs (nous n’exploitons aucun serveur pour cette extension).
+This data **stays on your device** and is not sent to our servers (we do not operate any servers for this extension).
 
-## Statistiques de trafic
+## Traffic statistics
 
-L’extension affiche des statistiques de volume (données descendantes et montantes) dans le popup. Ces valeurs sont **calculées localement** à partir des en-têtes des réponses (par ex. `Content-Length`). Elles ne sont **ni enregistrées de façon persistante ni transmises** à un tiers.
+The extension displays volume statistics (download and upload) in the popup. These values are **computed locally** from response headers (e.g. `Content-Length`). They are **neither stored persistently nor transmitted** to any third party.
 
-## Données transmises à des tiers (à votre initiative)
+## Data sent to third parties (at your choice)
 
-- **API Decodo** : si vous avez saisi une clé API Decodo dans les paramètres, l’extension envoie des requêtes à l’API Decodo pour récupérer la liste des serveurs. Les conditions d’utilisation et la politique de confidentialité de Decodo s’appliquent à ces échanges.
-- **Affichage des drapeaux** : en l’absence d’icônes locales, l’extension peut charger des images de drapeaux depuis un CDN (par ex. flagcdn.com) pour l’affichage dans l’interface. Aucun code exécutable n’est chargé depuis des serveurs externes.
+- **Decodo API**: if you have entered a Decodo API key in Settings, the extension sends requests to the Decodo API to fetch the server list. Decodo’s terms of use and privacy policy apply to those requests.
+- **Flag display**: if local flag icons are missing, the extension may load flag images from a CDN (e.g. flagcdn.com) for display in the UI. No executable code is loaded from external servers.
 
-## Authentification proxy
+## Proxy authentication
 
-Lorsque vous utilisez un serveur proxy qui demande un identifiant et un mot de passe, l’extension peut fournir automatiquement ces identifiants au navigateur (via l’API d’authentification proxy). Ces identifiants sont **conservés localement** et utilisés uniquement pour répondre aux demandes d’authentification du proxy ; ils ne sont pas envoyés à d’autres serveurs que celui du proxy que vous avez choisi.
+When you use a proxy server that requires a username and password, the extension can provide these credentials to the browser automatically (via the proxy auth API). These credentials are **stored locally** and used only to respond to the proxy’s authentication requests; they are not sent to any server other than the proxy you selected.
 
-## Programme natif OpenVPN (optionnel)
+## OpenVPN native program (optional)
 
-Si vous installez le « host natif » et utilisez les boutons « Démarrer OpenVPN » / « Arrêter OpenVPN » dans les paramètres, l’extension communique avec un programme installé sur votre machine pour lancer ou arrêter le processus OpenVPN. **Aucune donnée n’est envoyée sur internet** dans le cadre de cette communication ; elle reste entre l’extension et le programme local.
+If you install the “native host” and use the “Start OpenVPN” / “Stop OpenVPN” buttons in Settings, the extension communicates with a program installed on your machine to start or stop the OpenVPN process. **No data is sent over the internet** as part of this communication; it stays between the extension and the local program.
 
-## Modifications
+## Changes
 
-Toute modification importante de cette politique sera reflétée dans ce document avec une mise à jour de la date en tête de page. Nous vous encourageons à consulter cette page périodiquement.
+Any significant change to this policy will be reflected in this document with an updated date at the top. We encourage you to check this page from time to time.
 
 ## Contact
 
-Pour toute question relative à cette politique de confidentialité ou à l’extension VPN CX Net, vous pouvez ouvrir une issue sur le dépôt du projet ou contacter le mainteneur via la page du projet (par ex. GitHub).
+For any question about this privacy policy or the VPN CX Net extension, you can open an issue on the project repository or contact the maintainer via the project page (e.g. GitHub).
 
 ---
 
-**En résumé :** VPN CX Net ne collecte ni ne vend vos données. Les réglages et l’état du proxy restent sur votre appareil ; seules les actions que vous choisissez (liste des serveurs via Decodo, images de drapeaux) peuvent donner lieu à des requêtes vers des services externes.
+**In short:** VPN CX Net does not collect or sell your data. Settings and proxy state stay on your device; only the actions you choose (server list via Decodo, flag images) may result in requests to external services.

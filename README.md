@@ -1,52 +1,52 @@
 # VPN CX Net
 
-Extension navigateur **Chrome** et **Firefox** pour configurer et activer/désactiver un proxy (HTTP, SOCKS4, SOCKS5). Idéal pour rediriger tout le trafic du navigateur via un serveur VPN ou proxy.
+**Chrome** and **Firefox** browser extension to configure and enable/disable a proxy (HTTP, SOCKS4, SOCKS5). Ideal for routing all browser traffic through a VPN or proxy server.
 
-## Fonctionnalités
+## Features
 
-- **Activation/désactivation** du proxy en un clic depuis la barre d’outils
-- **Paramètres** : uniquement **OpenVPN** (chemin .ovpn, démarrer/arrêter) + optionnellement **Clé API Decodo** pour charger la liste des pays depuis l’API.
-- **Liste des pays** : par défaut depuis `data/data.csv` ; si une clé API Decodo est renseignée dans Paramètres, la liste est récupérée via l’[API Decodo](https://help.decodo.com/reference).
-- **Popup** : sélecteur **Pays** avec icônes drapeaux (`icons/flags/XX.png`, ex. FR.png, BE.png). Par défaut aucun pays n’est sélectionné.
-- **Persistance** : la configuration et l’état (on/off) sont conservés
-- **Compatibilité** : Chrome (Manifest V3) et Firefox 109+
+- **Enable/disable** the proxy with one click from the toolbar
+- **Settings**: **OpenVPN** only (path to .ovpn file, start/stop) + optional **Decodo API key** to load the country list from the API
+- **Country list**: by default from `data/data.csv`; if a Decodo API key is set in Settings, the list is fetched from the [Decodo API](https://help.decodo.com/reference)
+- **Popup**: **Country** selector with flag icons (`icons/flags/XX.png`, e.g. FR.png, BE.png). No country is selected by default
+- **Persistence**: configuration and state (on/off) are saved
+- **Compatibility**: Chrome (Manifest V3) and Firefox 126+
 
 ## Installation
 
 ### Chrome
 
-1. Ouvrir `chrome://extensions/`
-2. Activer **Mode développeur**
-3. Cliquer sur **Charger l’extension non empaquetée**
-4. Sélectionner le dossier du projet (`vpn-cx-net`)
+1. Open `chrome://extensions/`
+2. Enable **Developer mode**
+3. Click **Load unpacked**
+4. Select the project folder (`vpn-cx-net`)
 
 ### Firefox
 
-1. Ouvrir `about:debugging#/runtime/this-firefox`
-2. Cliquer sur **Charger un module complémentaire temporaire**
-3. Choisir le fichier `manifest.json` à la racine du projet
+1. Open `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on**
+3. Choose the `manifest.json` file at the project root
 
-Pour une installation permanente, il faut [signer l’extension](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/) avec un compte Mozilla.
+For a permanent installation, you must [sign the extension](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/) with a Mozilla account.
 
-## Utilisation
+## Usage
 
-1. Cliquer sur l’icône de l’extension.
-2. Choisir un **pays** dans le menu (drapeaux depuis `icons/flags/XX.png`). Par défaut « — Choisir un pays — » est affiché ; aucun pays n’est présélectionné.
-3. Le proxy s’active avec le serveur du pays choisi. Utiliser **Désactiver le proxy** pour couper.
+1. Click the extension icon
+2. Choose a **country** from the menu (flags from `icons/flags/XX.png`). By default “— Choose a country —” is shown; no country is pre-selected
+3. The proxy turns on with the selected country’s server. Use **Disable proxy** to turn it off
 
-Le trafic du navigateur passera par le serveur configuré. Les identifiants Decodo sont fournis automatiquement (Chrome).
+Browser traffic will go through the configured server. Decodo credentials are provided automatically (Chrome).
 
-### Liste des pays : data.csv ou API Decodo
+### Country list: data.csv or Decodo API
 
-Sans clé API, le fichier **`data/data.csv`** définit la liste des serveurs (menu Pays).
+Without an API key, the **`data/data.csv`** file defines the server list (Country menu).
 
-**Format Decodo (recommandé) — une ligne par serveur :**
+**Decodo format (recommended) — one line per server:**
 
 ```
 host:port:username:password
 ```
 
-Le pays est déduit du username (ex. `user-xxx-country-be` → Belgique). Exemple :
+The country is inferred from the username (e.g. `user-xxx-country-be` → Belgium). Example:
 
 ```
 isp.decodo.com:10001:user-sp1rg83e7n-country-be:laZqb7S~4bo8yJp6Eq
@@ -54,87 +54,88 @@ isp.decodo.com:10002:user-sp1rg83e7n-country-es:laZqb7S~4bo8yJp6Eq
 isp.decodo.com:10003:user-sp1rg83e7n-country-fr:laZqb7S~4bo8yJp6Eq
 ```
 
-**Format CSV avec en-tête** (virgule ou `|`) : `ip,location,asn` ou `countryCode,host,port,username,password`.
+**CSV format with header** (comma or `|`): `ip,location,asn` or `countryCode,host,port,username,password`.
 
-**Authentification proxy (Chrome)** : lorsque vous choisissez un pays dont le serveur a des identifiants dans le CSV (format Decodo), l’extension remplit automatiquement la demande « Se connecter » du proxy (nom d’utilisateur et mot de passe). Aucune saisie manuelle. Sur Firefox, la boîte de dialogue peut encore apparaître selon la version.
+**Proxy authentication (Chrome)**: when you choose a country whose server has credentials in the CSV (Decodo format), the extension automatically fills the proxy “Sign in” prompt (username and password). No manual entry. On Firefox, the dialog may still appear depending on the version.
 
-**Icônes drapeaux** : placez des images par code pays dans `icons/flags/` (ex. `FR.png`, `BE.png`, `ES.png`). Sinon un emoji drapeau est affiché.
+**Flag icons**: place images by country code in `icons/flags/` (e.g. `FR.png`, `BE.png`, `ES.png`). Otherwise a flag emoji or CDN image is used.
 
-**API Decodo** : dans Paramètres, champ optionnel « Clé API Decodo ». Si renseigné, la liste des pays est chargée depuis l’API Decodo au lieu de `data/data.csv`.
+**Decodo API**: in Settings, optional “Decodo API key” field. If set, the country list is loaded from the Decodo API instead of `data/data.csv`.
 
-### Utiliser OpenVPN
+### Using OpenVPN
 
-- **Sans host natif** : choisir le type **OpenVPN (proxy local)** dans Paramètres, puis indiquer l’adresse et le port du proxy local (souvent `127.0.0.1` et `1080`) exposé par votre client OpenVPN ou un service SOCKS. Enregistrer et activer le proxy dans le popup.
-- **Avec host natif (démarrage depuis l’extension)** :
-  1. Installer [OpenVPN](https://openvpn.net/community-resources/downloads/) et [Node.js](https://nodejs.org/).
-  2. Depuis la racine du projet : `node scripts/install-native-host.js`. Cela crée un manifeste dans `%LOCALAPPDATA%\vpn-cx-proxy\` (Windows) ou `~/.config/vpn-cx-proxy/` (Linux).
-  3. Remplacer dans ce manifeste `REPLACE_WITH_CHROME_EXTENSION_ID` et `REPLACE_WITH_FIREFOX_EXTENSION_ID` par l’ID de votre extension (Chrome : `chrome://extensions` ; Firefox : `about:debugging`).
-  4. Copier (ou créer un lien symbolique) du fichier manifeste vers le dossier des hosts natifs :
-     - **Chrome** : `%LOCALAPPDATA%\Google\Chrome\User Data\NativeMessagingHosts\`
-     - **Firefox** : `%APPDATA%\Mozilla\NativeMessagingHosts\` (Windows) ou `~/.mozilla/native-messaging-hosts/` (Linux).
-  5. Dans Paramètres de l’extension, section « Démarrer OpenVPN depuis l’extension », indiquer le chemin complet vers votre fichier `.ovpn`, puis utiliser **Démarrer OpenVPN** / **Arrêter OpenVPN**.
+- **Without native host**: choose **OpenVPN (local proxy)** in Settings, then enter the address and port of the local proxy (often `127.0.0.1` and `1080`) exposed by your OpenVPN client or a SOCKS service. Save and enable the proxy in the popup.
+- **With native host (start from the extension)**:
+  1. Install [OpenVPN](https://openvpn.net/community-resources/downloads/) and [Node.js](https://nodejs.org/).
+  2. From the project root: `node scripts/install-native-host.js`. This creates a manifest in `%LOCALAPPDATA%\vpn-cx-proxy\` (Windows) or `~/.config/vpn-cx-proxy/` (Linux).
+  3. In that manifest, replace `REPLACE_WITH_CHROME_EXTENSION_ID` and `REPLACE_WITH_FIREFOX_EXTENSION_ID` with your extension ID (Chrome: `chrome://extensions`; Firefox: `about:debugging`).
+  4. Copy (or create a symlink) the manifest file to the native messaging hosts folder:
+     - **Chrome**: `%LOCALAPPDATA%\Google\Chrome\User Data\NativeMessagingHosts\`
+     - **Firefox**: `%APPDATA%\Mozilla\NativeMessagingHosts\` (Windows) or `~/.mozilla/native-messaging-hosts/` (Linux).
+  5. In the extension Settings, under “Start OpenVPN from the extension”, enter the full path to your `.ovpn` file, then use **Start OpenVPN** / **Stop OpenVPN**.
 
 ## Build (Chrome & Firefox)
 
-Pour générer les paquets prêts à être déposés sur les stores :
+To generate packages ready for the stores:
 
 ```bash
 npm install
 npm run build
 ```
 
-Les archives sont créées dans `dist/` :
+Archives are created in `dist/`:
 
-- **dist/vpn-cx-proxy-chrome.zip** — à envoyer sur le [Chrome Web Store](https://chrome.google.com/webstore/devconsole)
-- **dist/vpn-cx-proxy-firefox.zip** — à envoyer sur [addons.mozilla.org](https://addons.mozilla.org/developers/) (Firefox accepte le .zip ; il sera signé et diffusé en .xpi)
+- **dist/vpn-cx-proxy-chrome.zip** — submit to the [Chrome Web Store](https://chrome.google.com/webstore/devconsole)
+- **dist/vpn-cx-proxy-firefox.zip** — submit to [addons.mozilla.org](https://addons.mozilla.org/developers/) (Firefox accepts the .zip; it will be signed and distributed as .xpi)
 
-Le contenu est identique pour les deux (manifeste compatible Chrome et Firefox). Le dossier `native/` n’est pas inclus dans le zip : l’hôte natif OpenVPN s’installe séparément sur la machine de l’utilisateur (voir section OpenVPN ci-dessus).
+Content is the same for both (manifest is compatible with Chrome and Firefox). The `native/` folder is not included in the zip: the OpenVPN native host is installed separately on the user’s machine (see OpenVPN section above).
 
-## Structure du projet
+## Project structure
 
 ```
 vpn-cx-net/
-├── manifest.json       # Manifeste commun Chrome / Firefox
+├── manifest.json       # Shared Chrome / Firefox manifest
+├── locales.js          # i18n (EN/FR)
 ├── background/         # Service worker (proxy on/off, OpenVPN native)
-├── popup/              # Popup (état + bouton on/off + lien options)
-├── options/            # Page de paramètres (host, port, type, OpenVPN)
-├── data/               # data.csv (liste des serveurs par défaut)
-├── icons/              # Icônes et drapeaux (optionnel)
-├── native/             # Host natif pour démarrer/arrêter OpenVPN (install séparée)
-├── scripts/            # Scripts (build, icônes, install host natif)
-├── dist/               # Généré par npm run build (zips Chrome / Firefox)
+├── popup/              # Popup (status, toggle, options link)
+├── options/            # Settings page (OpenVPN, Decodo API key)
+├── data/               # data.csv (default server list)
+├── icons/              # Icons and flags (optional)
+├── native/             # Native host to start/stop OpenVPN (separate install)
+├── scripts/            # Scripts (build, icons, install native host)
+├── dist/               # Generated by npm run build (Chrome / Firefox zips)
 └── README.md
 ```
 
-## Icônes (optionnel)
+## Icons (optional)
 
-L’extension fonctionne sans icônes personnalisées. Pour en ajouter :
+The extension works without custom icons. To add them:
 
-1. Créer le dossier `icons/` à la racine.
-2. Générer les PNG avec le script fourni :
+1. Create the `icons/` folder at the root.
+2. Generate PNGs with the provided script:
    ```bash
    npm install pngjs
    node scripts/generate-icons.js
    ```
-3. Ajouter dans `manifest.json` sous `action` et à la racine :
+3. Add to `manifest.json` under `action` and at the root:
    - `"default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png" }`
    - `"icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png" }`
 
 ## Permissions
 
-- **proxy** : pour appliquer les paramètres proxy du navigateur
-- **storage** : pour enregistrer la configuration et l’état
-- **nativeMessaging** : pour démarrer/arrêter OpenVPN via le host natif (optionnel)
-- **&lt;all_urls&gt;** : requis par l’API proxy pour pouvoir rediriger tout le trafic
+- **proxy**: to apply browser proxy settings
+- **storage**: to save configuration and state
+- **nativeMessaging**: to start/stop OpenVPN via the native host (optional)
+- **&lt;all_urls&gt;**: required by the proxy API to redirect all traffic
 
-## Limites
+## Limitations
 
-- **Authentification proxy** : les APIs natives ne gèrent pas toujours l’authentification (login/mot de passe) de façon simple. Pour un proxy authentifié, il peut être nécessaire d’utiliser une URL du type `http://user:pass@host:port` côté serveur ou un tunnel local.
-- **Firefox mode privé** : sous Firefox, la modification du proxy peut nécessiter l’autorisation d’accès aux fenêtres de navigation privée (paramètres de l’extension).
+- **Proxy authentication**: native APIs do not always handle authentication (login/password) in a simple way. For an authenticated proxy, you may need a URL like `http://user:pass@host:port` on the server side or a local tunnel.
+- **Firefox private mode**: on Firefox, changing the proxy may require permission to access private browsing windows (extension settings).
 
 ## Licence
 
-MIT (ou à préciser selon votre projet).
+MIT (or as specified for your project).
 
 ---
 

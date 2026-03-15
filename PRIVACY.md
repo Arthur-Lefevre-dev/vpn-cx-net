@@ -28,7 +28,7 @@ The extension displays volume statistics (download and upload) in the popup. The
 ## Data sent to third parties (at your choice)
 
 - **Decodo API**: if you have entered a Decodo API key in Settings, the extension sends requests to the Decodo API to fetch the server list. Decodo’s terms of use and privacy policy apply to those requests.
-- **Flag display**: if local flag icons are missing, the extension may load flag images from a CDN (e.g. flagcdn.com) for display in the UI. No executable code is loaded from external servers.
+- **Flag display**: flag images are loaded from a CDN (e.g. flagcdn.com) for display in the popup. No executable code is loaded from external servers.
 
 ## Proxy authentication
 
@@ -48,4 +48,4 @@ For any question about this privacy policy or the VPN CX Net extension, you can 
 
 ---
 
-**In short:** VPN CX Net does not collect or sell your data. Settings and proxy state stay on your device; only the actions you choose (server list via Decodo, flag images) may result in requests to external services.
+**In short:** VPN CX Net does not collect or sell your data. Settings and proxy state stay on your device; only the actions you choose (server list via Decodo, flag images from the web) may result in requests to external services.

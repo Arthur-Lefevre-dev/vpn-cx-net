@@ -23,7 +23,7 @@ const INCLUDED = [
   'popup',           // popup/popup.html, popup.css, popup.js
   'options',         // options/options.html, options.css, options.js
   'data',            // data/data.csv (default server list)
-  'icons'            // icons/icon16|32|48.png, icons/flags/*.png (optional)
+  'icons'            // icons/icon16|32|48.png (optional)
 ];
 
 // Critical entries: build fails if missing. Optional entries only warn.
@@ -101,32 +101,51 @@ function main() {
   ensureDir(DIST_DIR);
   const chromeZip = path.join(DIST_DIR, 'vpn-cx-proxy-chrome.zip');
   const firefoxZip = path.join(DIST_DIR, 'vpn-cx-proxy-firefox.zip');
+  const chromeBuildDir = path.join(DIST_DIR, 'build-chrome');
   const firefoxBuildDir = path.join(DIST_DIR, 'build-firefox');
 
-  // Firefox manifest: remove service_worker (unsupported on Firefox) to avoid validator warning
+  const manifest = JSON.parse(fs.readFileSync(path.join(buildDir, 'manifest.json'), 'utf8'));
+
+  // Chrome (MV3): only service_worker allowed; scripts would trigger "requires manifest version 2 or lower"
+  function createChromeBuildDir() {
+    if (fs.existsSync(chromeBuildDir)) fs.rmSync(chromeBuildDir, { recursive: true });
+    ensureDir(chromeBuildDir);
+    for (const name of fs.readdirSync(buildDir)) {
+      copyRecursive(path.join(buildDir, name), path.join(chromeBuildDir, name));
+    }
+    const chromeManifest = JSON.parse(JSON.stringify(manifest));
+    if (chromeManifest.background) {
+      delete chromeManifest.background.scripts;
+      if (Object.keys(chromeManifest.background).length === 0) chromeManifest.background = { service_worker: 'background/background.js' };
+    }
+    fs.writeFileSync(path.join(chromeBuildDir, 'manifest.json'), JSON.stringify(chromeManifest, null, 2), 'utf8');
+  }
+
+  // Firefox: only scripts (service_worker unsupported, causes AMO warning)
   function createFirefoxBuildDir() {
     if (fs.existsSync(firefoxBuildDir)) fs.rmSync(firefoxBuildDir, { recursive: true });
     ensureDir(firefoxBuildDir);
     for (const name of fs.readdirSync(buildDir)) {
       copyRecursive(path.join(buildDir, name), path.join(firefoxBuildDir, name));
     }
-    const manifestPath = path.join(buildDir, 'manifest.json');
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    if (manifest.background && manifest.background.service_worker) {
-      delete manifest.background.service_worker;
+    const firefoxManifest = JSON.parse(JSON.stringify(manifest));
+    if (firefoxManifest.background && firefoxManifest.background.service_worker) {
+      delete firefoxManifest.background.service_worker;
     }
-    fs.writeFileSync(path.join(firefoxBuildDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    fs.writeFileSync(path.join(firefoxBuildDir, 'manifest.json'), JSON.stringify(firefoxManifest, null, 2), 'utf8');
   }
 
-  console.log('\nCreating Chrome package...');
-  createZip(chromeZip, buildDir).then(() => {
+  console.log('\nCreating Chrome package (manifest: service_worker only)...');
+  createChromeBuildDir();
+  createZip(chromeZip, chromeBuildDir).then(() => {
     console.log('  ->', chromeZip);
-    console.log('\nCreating Firefox package (manifest without service_worker)...');
+    console.log('\nCreating Firefox package (manifest: scripts only)...');
     createFirefoxBuildDir();
     return createZip(firefoxZip, firefoxBuildDir);
   }).then(() => {
     console.log('  ->', firefoxZip);
     fs.rmSync(buildDir, { recursive: true });
+    if (fs.existsSync(chromeBuildDir)) fs.rmSync(chromeBuildDir, { recursive: true });
     if (fs.existsSync(firefoxBuildDir)) fs.rmSync(firefoxBuildDir, { recursive: true });
     console.log('\nDone. Upload vpn-cx-proxy-chrome.zip to Chrome Web Store and vpn-cx-proxy-firefox.zip to addons.mozilla.org.');
   }).catch((err) => {

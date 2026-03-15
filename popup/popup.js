@@ -1,5 +1,5 @@
 /**
- * Popup: country list from Decodo API or data.csv, flag icons from icons/flags/XX.png, default selection = none.
+ * Popup: country list from Decodo API or data.csv, flag icons from web (CDN), default selection = none.
  */
 
 const statusDot = document.getElementById('statusDot');
@@ -19,27 +19,18 @@ const trafficUp = document.getElementById('trafficUp');
 const trafficTotal = document.getElementById('trafficTotal');
 const localeSelect = document.getElementById('localeSelect');
 
-function flagIconUrl(countryCode) {
-  if (!countryCode || countryCode.length !== 2) return '';
-  return chrome.runtime.getURL('icons/flags/' + countryCode.toUpperCase() + '.png');
-}
-
-function flagCdnUrl(countryCode) {
+/** URL for a country flag image (web CDN). */
+function flagImageUrl(countryCode) {
   if (!countryCode || countryCode.length !== 2) return '';
   return 'https://flagcdn.com/w40/' + countryCode.toLowerCase() + '.png';
 }
 
-/** Create an img element for a country flag (local icon with CDN fallback). */
+/** Create an img element for a country flag (loaded from web). */
 function createFlagImg(code) {
   const img = document.createElement('img');
   img.className = 'flag-img';
-  img.alt = '';
-  img.src = flagIconUrl(code);
-  img.onerror = function () {
-    this.onerror = null;
-    this.src = flagCdnUrl(code);
-    this.alt = code;
-  };
+  img.alt = code || '';
+  img.src = flagImageUrl(code);
   return img;
 }
 
@@ -62,11 +53,7 @@ function setSelectionDisplay(serverOrNull) {
   if (currentCountryFlag) {
     if (serverOrNull) {
       const code = serverCountryCode(serverOrNull);
-      currentCountryFlag.src = flagIconUrl(code);
-      currentCountryFlag.onerror = function () {
-        this.onerror = null;
-        this.src = flagCdnUrl(code);
-      };
+      currentCountryFlag.src = flagImageUrl(code);
       currentCountryFlag.alt = code;
     } else {
       currentCountryFlag.removeAttribute('src');
@@ -126,7 +113,8 @@ function renderState(state) {
 
   selectedIndex = -1;
   setSelectionDisplay(null);
-  if (hasConfig && servers.length > 0) {
+  // Only restore selected country when proxy is enabled; when disabled, show "Choose a country"
+  if (enabled && hasConfig && servers.length > 0) {
     const idx = servers.findIndex((s) => s.host === state.host && s.port === state.port);
     if (idx >= 0) {
       selectedIndex = idx;

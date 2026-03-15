@@ -2,9 +2,9 @@
 /**
  * Builds the extension for Chrome and Firefox.
  * Output: dist/vpn-cx-proxy-chrome.zip and dist/vpn-cx-proxy-firefox.zip
- * Chrome zip: manifest with background.scripts + background.service_worker.
- * Firefox zip: manifest with background.scripts only (no service_worker) to avoid
- *   "Unsupported service_worker property" warning on addons.mozilla.org.
+ * Root manifest: service_worker only (Chrome MV3 rejects scripts; Firefox 109+ supports service_worker for unpacked).
+ * Chrome zip: same (service_worker only).
+ * Firefox zip: manifest with background.scripts only (no service_worker) for AMO to avoid service_worker warning.
  */
 
 const fs = require('fs');
@@ -121,7 +121,7 @@ function main() {
     fs.writeFileSync(path.join(chromeBuildDir, 'manifest.json'), JSON.stringify(chromeManifest, null, 2), 'utf8');
   }
 
-  // Firefox: only scripts (service_worker unsupported, causes AMO warning)
+  // Firefox zip: scripts only (AMO expects scripts; service_worker can trigger warning)
   function createFirefoxBuildDir() {
     if (fs.existsSync(firefoxBuildDir)) fs.rmSync(firefoxBuildDir, { recursive: true });
     ensureDir(firefoxBuildDir);
@@ -129,8 +129,9 @@ function main() {
       copyRecursive(path.join(buildDir, name), path.join(firefoxBuildDir, name));
     }
     const firefoxManifest = JSON.parse(JSON.stringify(manifest));
-    if (firefoxManifest.background && firefoxManifest.background.service_worker) {
+    if (firefoxManifest.background) {
       delete firefoxManifest.background.service_worker;
+      firefoxManifest.background.scripts = ['background/background.js'];
     }
     fs.writeFileSync(path.join(firefoxBuildDir, 'manifest.json'), JSON.stringify(firefoxManifest, null, 2), 'utf8');
   }

@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.zip
 *.xpi
+data/data-no-premium.csv
+data/data.csv

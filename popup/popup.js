@@ -41,6 +41,15 @@ function createFlagImg(code) {
   return img;
 }
 
+/** Create a "?" span used as flag for the Random option. */
+function createRandomFlagSpan() {
+  const span = document.createElement("span");
+  span.className = "flag-img flag-random";
+  span.setAttribute("aria-hidden", "true");
+  span.textContent = "?";
+  return span;
+}
+
 function countryName(server) {
   return typeof getCountryName !== "undefined"
     ? getCountryName(serverCountryCode(server))
@@ -52,36 +61,42 @@ function serverCountryCode(server) {
   return (server.countryCode || server.name || "XX").toUpperCase();
 }
 
+const RANDOM_INDEX = "random";
+
 /** Update current selection display: trigger value, big flag block, and optional container. */
 function setSelectionDisplay(serverOrNull) {
   if (serverSelectValue) {
     serverSelectValue.textContent = "";
-    serverSelectValue
-      .querySelectorAll(".flag-img")
-      .forEach((el) => el.remove());
+    serverSelectValue.querySelectorAll(".flag-img, .flag-random").forEach((el) => el.remove());
   }
-  if (currentCountry)
+  if (currentCountry) {
     currentCountry.setAttribute("aria-hidden", serverOrNull ? "false" : "true");
+    currentCountry.classList.toggle("is-random", !!(serverOrNull && serverOrNull.isRandom));
+  }
   if (currentCountryFlag) {
-    if (serverOrNull) {
+    if (serverOrNull && !serverOrNull.isRandom) {
       const code = serverCountryCode(serverOrNull);
       currentCountryFlag.src = flagImageUrl(code);
       currentCountryFlag.alt = code;
     } else {
       currentCountryFlag.removeAttribute("src");
+      currentCountryFlag.alt = serverOrNull && serverOrNull.isRandom ? "?" : "";
     }
   }
   if (currentCountryName)
     currentCountryName.textContent = serverOrNull
-      ? countryName(serverOrNull)
+      ? (serverOrNull.isRandom ? "Random" : countryName(serverOrNull))
       : "";
   if (serverSelectValue) {
     if (serverOrNull) {
-      const code = serverCountryCode(serverOrNull);
-      serverSelectValue.appendChild(createFlagImg(code));
-      serverSelectValue.appendChild(
-        document.createTextNode(" " + countryName(serverOrNull)),
-      );
+      if (serverOrNull.isRandom) {
+        serverSelectValue.appendChild(createRandomFlagSpan());
+        serverSelectValue.appendChild(document.createTextNode(" Random"));
+      } else {
+        const code = serverCountryCode(serverOrNull);
+        serverSelectValue.appendChild(createFlagImg(code));
+        serverSelectValue.appendChild(document.createTextNode(" " + countryName(serverOrNull)));
+      }
     } else {
       serverSelectValue.textContent = msg("chooseCountryPlaceholder", "— Choose a country —");
     }
@@ -100,13 +115,17 @@ function formatBytes(bytes) {
 }
 
 let currentServers = [];
+let currentRandomServers = [];
 let selectedIndex = -1;
 
 function renderState(state) {
   const enabled = !!state.enabled;
   const hasConfig = !!(state.host && state.port);
-  const servers = state.dedicatedServers || [];
+  const servers = (state.dedicatedServers || []).slice().sort((a, b) =>
+    countryName(a).localeCompare(countryName(b))
+  );
   currentServers = servers;
+  currentRandomServers = state.randomServers || [];
 
   if (statusDot) {
     statusDot.classList.toggle("active", enabled);
@@ -136,20 +155,23 @@ function renderState(state) {
 
   selectedIndex = -1;
   setSelectionDisplay(null);
-  // Only restore selected country when proxy is enabled; when disabled, show "Choose a country"
-  if (enabled && hasConfig && servers.length > 0) {
-    const idx = servers.findIndex(
-      (s) => s.host === state.host && s.port === state.port,
-    );
-    if (idx >= 0) {
-      selectedIndex = idx;
-      setSelectionDisplay(servers[idx]);
+  if (enabled && hasConfig) {
+    if (state.isRandomConnection) {
+      selectedIndex = RANDOM_INDEX;
+      setSelectionDisplay({ isRandom: true });
+    } else if (servers.length > 0) {
+      const idx = servers.findIndex((s) => s.host === state.host && s.port === state.port);
+      if (idx >= 0) {
+        selectedIndex = idx;
+        setSelectionDisplay(servers[idx]);
+      }
     }
   }
 
   if (!serverSelectDropdown) return;
   serverSelectDropdown.innerHTML = "";
-  if (servers.length > 0 && serverSelectWrap) {
+  const hasOptions = servers.length > 0 || currentRandomServers.length > 0;
+  if (hasOptions && serverSelectWrap) {
     serverSelectWrap.hidden = false;
     const defaultOpt = document.createElement("button");
     defaultOpt.type = "button";
@@ -168,6 +190,16 @@ function renderState(state) {
       opt.appendChild(document.createTextNode(" " + countryName(s)));
       serverSelectDropdown.appendChild(opt);
     });
+    if (currentRandomServers.length > 0) {
+      const randomOpt = document.createElement("button");
+      randomOpt.type = "button";
+      randomOpt.className = "server-select-option";
+      randomOpt.role = "option";
+      randomOpt.dataset.index = RANDOM_INDEX;
+      randomOpt.appendChild(createRandomFlagSpan());
+      randomOpt.appendChild(document.createTextNode(" Random"));
+      serverSelectDropdown.appendChild(randomOpt);
+    }
   } else if (serverSelectWrap) {
     serverSelectWrap.hidden = true;
   }
@@ -218,26 +250,50 @@ if (serverSelectDropdown) {
   serverSelectDropdown.addEventListener("click", (e) => {
     const opt = e.target.closest(".server-select-option");
     if (!opt) return;
-    const idx = parseInt(opt.dataset.index, 10);
-    if (idx < 0) {
+    const idx = opt.dataset.index;
+    if (idx === "-1") {
       setSelectionDisplay(null);
       selectedIndex = -1;
       closeDropdown();
       chrome.runtime.sendMessage(
         {
           action: "setState",
-          payload: { enabled: false, host: "", port: 0, type: "http" },
+          payload: { enabled: false, host: "", port: 0, type: "http", isRandomConnection: false },
         },
         () => loadState(),
       );
       return;
     }
-    if (!currentServers[idx]) return;
-    const server = currentServers[idx];
-    selectedIndex = idx;
+    if (idx === RANDOM_INDEX) {
+      if (currentRandomServers.length === 0) return;
+      const server = currentRandomServers[Math.floor(Math.random() * currentRandomServers.length)];
+      selectedIndex = RANDOM_INDEX;
+      setSelectionDisplay({ isRandom: true });
+      closeDropdown();
+      chrome.runtime.sendMessage(
+        {
+          action: "setState",
+          payload: {
+            enabled: true,
+            host: server.host,
+            port: server.port,
+            type: server.type || "http",
+            username: server.username || "",
+            password: server.password || "",
+            countryCode: serverCountryCode(server),
+            isRandomConnection: true,
+          },
+        },
+        () => loadState(),
+      );
+      return;
+    }
+    const i = parseInt(idx, 10);
+    if (!Number.isFinite(i) || !currentServers[i]) return;
+    const server = currentServers[i];
+    selectedIndex = i;
     setSelectionDisplay(server);
     closeDropdown();
-
     chrome.runtime.sendMessage(
       {
         action: "setState",
@@ -249,6 +305,7 @@ if (serverSelectDropdown) {
           username: server.username || "",
           password: server.password || "",
           countryCode: serverCountryCode(server),
+          isRandomConnection: false,
         },
       },
       () => loadState(),
@@ -320,10 +377,13 @@ if (toggleBtn) {
         host: state.host,
         port: state.port,
         type: state.type,
+        isRandomConnection: nextEnabled ? !!state.isRandomConnection : false,
       };
       if (nextEnabled && state.proxyCountryCode) {
         payload.countryCode = state.proxyCountryCode;
       }
+      if (nextEnabled && state.proxyUsername != null) payload.username = state.proxyUsername;
+      if (nextEnabled && state.proxyPassword != null) payload.password = state.proxyPassword;
       chrome.runtime.sendMessage(
         { action: "setState", payload },
         () => loadState(),

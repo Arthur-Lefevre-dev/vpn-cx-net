@@ -404,21 +404,21 @@ function countryFromUsername(username) {
 }
 
 /**
- * Parse default servers from bundled data/data.csv.
- * Supports:
- *   - Decodo line format: host:port:username:password (country from username, e.g. country-be)
- *   - CSV with header: ip,location,asn or countryCode,host,port,username,password
- * @returns {Promise<Array<{countryCode,host,port,username,password,type,name}>>}
+ * Load servers from a single CSV path (data.csv or data-random.csv).
+ * Supports Decodo line format and CSV with header.
+ * @param {string} pathInExtension - e.g. "data/data.csv"
+ * @param {{ premium?: boolean }} opts - if premium: true, each server gets premium: true
+ * @returns {Promise<Array<{countryCode,host,port,username,password,type,name,premium?}>>}
  */
-function loadDefaultServersFromCSV() {
-  const url = chrome.runtime.getURL("data/data.csv");
+function loadServersFromCsvPath(pathInExtension, opts = {}) {
+  const url = chrome.runtime.getURL(pathInExtension);
   return fetch(url)
-    .then((r) => r.text())
+    .then((r) => {
+      if (!r.ok) throw new Error("CSV " + r.status);
+      return r.text();
+    })
     .then((text) => {
-      const lines = text
-        .trim()
-        .split(/\r?\n/)
-        .filter((l) => l.trim());
+      const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
       if (lines.length === 0) return [];
 
       const first = lines[0];
@@ -433,9 +433,10 @@ function loadDefaultServersFromCSV() {
           const host = parts[0];
           const port = parseInt(parts[1], 10) || 1080;
           const username = parts[2];
-          const password = parts.slice(3).join(":"); // password may contain ':'
+          const password = parts.slice(3).join(":");
           const countryCode = countryFromUsername(username);
           return {
+            ...(opts.premium && { premium: true }),
             countryCode,
             host,
             port,
@@ -448,21 +449,17 @@ function loadDefaultServersFromCSV() {
       }
 
       const sep = first.includes("|") ? "|" : ",";
-      const header = first
-        .toLowerCase()
-        .split(sep)
-        .map((h) => h.trim());
+      const header = first.toLowerCase().split(sep).map((h) => h.trim());
       const rows = [];
       for (let i = 1; i < lines.length; i++) {
         const parts = lines[i].split(sep).map((p) => p.trim());
         const row = {};
-        header.forEach((h, j) => {
-          row[h] = (parts[j] || "").trim();
-        });
+        header.forEach((h, j) => { row[h] = (parts[j] || "").trim(); });
         const host = row.ip || row.host;
         const location = (row.location || row.countrycode || "").toUpperCase();
         if (!host) continue;
         rows.push({
+          ...(opts.premium && { premium: true }),
           countryCode: location || "XX",
           host,
           port: parseInt(row.port, 10) || 1080,
@@ -475,6 +472,17 @@ function loadDefaultServersFromCSV() {
       return rows;
     })
     .catch(() => []);
+}
+
+/**
+ * Load premium servers (data.csv) and random pool (data-random.csv).
+ * @returns {Promise<{ dedicatedServers: Array, randomServers: Array }>}
+ */
+function loadDefaultServersFromCSV() {
+  return Promise.all([
+    loadServersFromCsvPath("data/data.csv", { premium: true }),
+    loadServersFromCsvPath("data/data-random.csv", {}),
+  ]).then(([dedicatedServers, randomServers]) => ({ dedicatedServers, randomServers }));
 }
 
 /**
@@ -517,15 +525,21 @@ function loadServersFromDecodoAPI(apiKey) {
     .catch(() => []);
 }
 
-/** Resolve list of servers (Decodo API if key set, else CSV). */
+/**
+ * Resolve server lists: Decodo API returns only dedicatedServers; CSV returns both.
+ * @returns {Promise<{ dedicatedServers: Array, randomServers: Array }>}
+ */
 function getServersSource() {
   return new Promise((resolve) => {
     chrome.storage.local.get(["decodoApiKey"], (keyData) => {
       const apiKey = (keyData.decodoApiKey || "").trim();
-      const promise = apiKey
-        ? loadServersFromDecodoAPI(apiKey)
-        : loadDefaultServersFromCSV();
-      promise.then(resolve);
+      if (apiKey) {
+        loadServersFromDecodoAPI(apiKey).then((dedicatedServers) => {
+          resolve({ dedicatedServers: dedicatedServers || [], randomServers: [] });
+        });
+      } else {
+        loadDefaultServersFromCSV().then(resolve);
+      }
     });
   });
 }
@@ -537,15 +551,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
   if (message.action === "getState") {
-    getServersSource().then((dedicatedServers) => {
+    getServersSource().then(({ dedicatedServers, randomServers }) => {
       chrome.storage.local.get(
-        ["enabled", "host", "port", "type", "proxyCountryCode"],
+        ["enabled", "host", "port", "type", "proxyCountryCode", "isRandomConnection", "proxyUsername", "proxyPassword"],
         (data) => {
           sendResponse({
             ...DEFAULT_CONFIG,
             ...data,
             proxyCountryCode: normalizeCountryCode(data.proxyCountryCode),
             dedicatedServers: dedicatedServers || [],
+            randomServers: randomServers || [],
+            isRandomConnection: !!data.isRandomConnection,
             trafficStats: { ...trafficStats },
           });
         },
@@ -554,7 +570,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true; // async response
   }
   if (message.action === "setState") {
-    const { enabled, host, port, type, username, password, countryCode } =
+    const { enabled, host, port, type, username, password, countryCode, isRandomConnection } =
       message.payload || {};
     const proxyUsername = username ?? "";
     const proxyPassword = password ?? "";
@@ -568,6 +584,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         proxyUsername,
         proxyPassword,
         proxyCountryCode: proxyCountryCode,
+        isRandomConnection: !!isRandomConnection,
       },
       () => {
         if (enabled && host && port) {

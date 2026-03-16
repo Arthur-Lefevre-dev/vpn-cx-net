@@ -35,7 +35,8 @@
       decodoApiKeyLabel: "Decodo API key (optional)",
       decodoApiKeyPlaceholder: "Country list from Decodo API",
       decodoApiKeyHelp:
-        "If set, the popup country list is loaded from the Decodo API instead of data.csv.",
+        "If set, the popup also shows proxy servers from the Decodo API in addition to the default list.",
+      decodoAffiliationLink: "Decodo — Create account",
       languageLabel: "Language",
       ovpnPathRequired: "Enter the path to the .ovpn file.",
       openvpnStarting: "Starting…",
@@ -77,7 +78,8 @@
       decodoApiKeyLabel: "Clé API Decodo (optionnel)",
       decodoApiKeyPlaceholder: "Liste des pays depuis l'API Decodo",
       decodoApiKeyHelp:
-        "Si renseignée, la liste des pays du popup est chargée depuis l'API Decodo au lieu du fichier data.csv.",
+        "Si renseignée, le popup affiche aussi les serveurs proxy de l'API Decodo en plus de la liste par défaut.",
+      decodoAffiliationLink: "Decodo — Créer un compte",
       languageLabel: "Langue",
       ovpnPathRequired: "Indiquez le chemin du fichier .ovpn.",
       openvpnStarting: "Démarrage…",

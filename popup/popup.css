@@ -318,6 +318,14 @@ body {
   border-radius: 2px;
 }
 
+.server-select-section-label {
+  padding: 6px 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #666);
+}
+
 .actions {
   display: flex;
   flex-direction: column;

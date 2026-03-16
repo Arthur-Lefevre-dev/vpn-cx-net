@@ -136,6 +136,15 @@ input[type="checkbox"] {
   border-color: var(--text-muted);
 }
 
+.affiliation-link {
+  margin-top: 12px;
+}
+
+.affiliation-link a {
+  display: inline-block;
+  text-decoration: none;
+}
+
 .message {
   margin-top: 20px;
   padding: 12px;

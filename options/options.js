@@ -48,6 +48,8 @@ function applyLocale() {
   doc("ovpnPathLabel", "ovpnPathLabel");
   doc("decodoApiKeyLabel", "decodoApiKeyLabel");
   doc("decodoApiKeyHelp", "decodoApiKeyHelp");
+  const affEl = document.getElementById("decodoAffiliationLink");
+  if (affEl) affEl.textContent = getMessage("decodoAffiliationLink");
   doc("creditPrefix", "madeBy");
   if (ovpnPathInput)
     ovpnPathInput.placeholder = getMessage("ovpnPathPlaceholder");

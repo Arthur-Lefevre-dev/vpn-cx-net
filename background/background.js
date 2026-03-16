@@ -501,8 +501,7 @@ function loadServersFromDecodoAPI(apiKey) {
       return r.json();
     })
     .then((data) => {
-      const list =
-        data.data || data.endpoints || (Array.isArray(data) ? data : []);
+      const list = data.data || data.endpoints || (Array.isArray(data) ? data : []);
       return list
         .map((e) => {
           const countryCode =
@@ -511,6 +510,7 @@ function loadServersFromDecodoAPI(apiKey) {
               .toUpperCase()
               .slice(0, 2) || "XX";
           return {
+            fromDecodo: true,
             countryCode,
             host: e.host || e.endpoint || "isp.decodo.com",
             port: parseInt(e.port, 10) || 10001,
@@ -526,20 +526,23 @@ function loadServersFromDecodoAPI(apiKey) {
 }
 
 /**
- * Resolve server lists: Decodo API returns only dedicatedServers; CSV returns both.
+ * Resolve server lists: always include CSV (data.csv + data-random.csv); if API key is set, add Decodo servers too.
  * @returns {Promise<{ dedicatedServers: Array, randomServers: Array }>}
  */
 function getServersSource() {
   return new Promise((resolve) => {
     chrome.storage.local.get(["decodoApiKey"], (keyData) => {
       const apiKey = (keyData.decodoApiKey || "").trim();
-      if (apiKey) {
-        loadServersFromDecodoAPI(apiKey).then((dedicatedServers) => {
-          resolve({ dedicatedServers: dedicatedServers || [], randomServers: [] });
-        });
-      } else {
-        loadDefaultServersFromCSV().then(resolve);
-      }
+      loadDefaultServersFromCSV().then(({ dedicatedServers: csvDedicated, randomServers }) => {
+        if (apiKey) {
+          loadServersFromDecodoAPI(apiKey).then((decodoServers) => {
+            const dedicatedServers = (csvDedicated || []).concat(decodoServers || []);
+            resolve({ dedicatedServers, randomServers: randomServers || [] });
+          });
+        } else {
+          resolve({ dedicatedServers: csvDedicated || [], randomServers: randomServers || [] });
+        }
+      });
     });
   });
 }

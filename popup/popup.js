@@ -121,9 +121,12 @@ let selectedIndex = -1;
 function renderState(state) {
   const enabled = !!state.enabled;
   const hasConfig = !!(state.host && state.port);
-  const servers = (state.dedicatedServers || []).slice().sort((a, b) =>
-    countryName(a).localeCompare(countryName(b))
-  );
+  const all = (state.dedicatedServers || []).slice();
+  const localServers = all.filter((s) => !s.fromDecodo);
+  const decodoServers = all.filter((s) => s.fromDecodo);
+  const servers = localServers
+    .sort((a, b) => countryName(a).localeCompare(countryName(b)))
+    .concat(decodoServers.sort((a, b) => countryName(a).localeCompare(countryName(b))));
   currentServers = servers;
   currentRandomServers = state.randomServers || [];
 
@@ -180,16 +183,41 @@ function renderState(state) {
     defaultOpt.dataset.index = "-1";
     defaultOpt.textContent = msg("chooseCountryPlaceholder", "— Choose a country —");
     serverSelectDropdown.appendChild(defaultOpt);
-    servers.forEach((s, i) => {
-      const opt = document.createElement("button");
-      opt.type = "button";
-      opt.className = "server-select-option";
-      opt.role = "option";
-      opt.dataset.index = String(i);
-      opt.appendChild(createFlagImg(serverCountryCode(s)));
-      opt.appendChild(document.createTextNode(" " + countryName(s)));
-      serverSelectDropdown.appendChild(opt);
-    });
+    // Local/CSV servers section
+    let indexOffset = 0;
+    const local = servers.filter((s) => !s.fromDecodo);
+    const decodo = servers.filter((s) => s.fromDecodo);
+    if (local.length > 0) {
+      local.forEach((s, i) => {
+        const opt = document.createElement("button");
+        opt.type = "button";
+        opt.className = "server-select-option";
+        opt.role = "option";
+        opt.dataset.index = String(indexOffset + i);
+        opt.appendChild(createFlagImg(serverCountryCode(s)));
+        opt.appendChild(document.createTextNode(" " + countryName(s)));
+        serverSelectDropdown.appendChild(opt);
+      });
+      indexOffset += local.length;
+    }
+    // Decodo section (if any)
+    if (decodo.length > 0) {
+      const header = document.createElement("div");
+      header.className = "server-select-section-label";
+      header.textContent = "Decodo API";
+      serverSelectDropdown.appendChild(header);
+      decodo.forEach((s, i) => {
+        const opt = document.createElement("button");
+        opt.type = "button";
+        opt.className = "server-select-option";
+        opt.role = "option";
+        opt.dataset.index = String(indexOffset + i);
+        opt.appendChild(createFlagImg(serverCountryCode(s)));
+        const label = `${countryName(s)} — ${s.host}:${s.port}`;
+        opt.appendChild(document.createTextNode(" " + label));
+        serverSelectDropdown.appendChild(opt);
+      });
+    }
     if (currentRandomServers.length > 0) {
       const randomOpt = document.createElement("button");
       randomOpt.type = "button";

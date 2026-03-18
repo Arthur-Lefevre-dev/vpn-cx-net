@@ -21,25 +21,6 @@ const trafficUp = document.getElementById("trafficUp");
 const trafficTotal = document.getElementById("trafficTotal");
 const localeSelect = document.getElementById("localeSelect");
 
-function copyTextToClipboard(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    return navigator.clipboard.writeText(text);
-  }
-  return new Promise((resolve, reject) => {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      resolve();
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
 // Link from the popup to the Options page (shown when Private Browsing is not allowed).
 if (privateBrowsingOptionsLink && chrome?.runtime?.getURL) {
   privateBrowsingOptionsLink.href = chrome.runtime.getURL(

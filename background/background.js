@@ -178,7 +178,6 @@ function applyProxy(config) {
   if (IS_FIREFOX) {
     try {
       const p = proxyAPI.settings.set({ value: getFirefoxProxySettings(config) });
-      console.log("Firefox proxy set:", config, getFirefoxProxySettings(config));
       if (p && typeof p.catch === "function") {
         return p.catch((err) => {
           console.error("Firefox proxy set failed:", err, config);
@@ -222,7 +221,6 @@ function clearProxy() {
   if (IS_FIREFOX) {
     try {
       const p = proxyAPI.settings.set({ value: { proxyType: "none" } });
-      console.log("Firefox proxy cleared");
       if (p && typeof p.catch === "function") {
         return p.catch((err) => {
           console.error("Firefox proxy clear failed:", err);

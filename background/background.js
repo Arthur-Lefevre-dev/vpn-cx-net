@@ -251,6 +251,31 @@ function clearProxy() {
 }
 
 /**
+ * Sync proxy settings with a config snapshot while respecting Firefox
+ * "private browsing required" restriction.
+ * - If private browsing is NOT allowed: we only toggle our internal state
+ *   (setProxyEnabled(false)) and do NOT call proxyAPI.settings.set/clear.
+ * - If allowed: enable via applyProxy or disable via clearProxy.
+ *
+ * @param {{ enabled?: boolean, host?: string, port?: number|string, type?: string }} config
+ */
+async function syncProxyState(config) {
+  const allowed = await isPrivateBrowsingAllowed();
+  if (!allowed) {
+    setProxyEnabled(false);
+    return;
+  }
+
+  const shouldEnable = !!(config && config.enabled && config.host && config.port);
+  if (shouldEnable) {
+    await applyProxy({ ...config, type: config.type ?? DEFAULT_CONFIG.type });
+    return;
+  }
+
+  await clearProxy();
+}
+
+/**
  * Load saved config from storage and apply proxy state.
  */
 function loadAndApplyState() {
@@ -260,19 +285,7 @@ function loadAndApplyState() {
     (data) => {
       proxyCountryCode = normalizeCountryCode(data.proxyCountryCode);
       const config = { ...DEFAULT_CONFIG, ...data };
-      isPrivateBrowsingAllowed().then((allowed) => {
-        if (config.enabled && config.host && config.port) {
-          if (allowed) {
-            setProxyEnabled(true);
-            applyProxy(config).catch(() => {});
-          } else {
-            setProxyEnabled(false);
-          }
-        } else {
-          if (allowed) clearProxy().catch(() => {});
-          else setProxyEnabled(false);
-        }
-      });
+      syncProxyState(config).catch(() => {});
     },
   );
 }
@@ -289,10 +302,7 @@ chrome.runtime.onStartup.addListener(() => {
     },
     () => {
       proxyAuth = { host: "", port: 0, username: "", password: "" };
-      isPrivateBrowsingAllowed().then((allowed) => {
-        if (allowed) clearProxy().catch(() => {});
-        else setProxyEnabled(false);
-      });
+      syncProxyState({ ...DEFAULT_CONFIG, enabled: false, host: "", port: 1080 }).catch(() => {});
     },
   );
 });
@@ -334,11 +344,18 @@ const DNR_RESOURCE_TYPES = [
 ];
 
 function buildRegionHeaders() {
-  const acceptLanguage = getAcceptLanguageForCountry(proxyCountryCode);
+  const { userAgent, acceptLanguage } = getRegionHeaderValues();
   return [
-    { header: "user-agent", operation: "set", value: WINDOWS_USER_AGENT },
+    { header: "user-agent", operation: "set", value: userAgent },
     { header: "accept-language", operation: "set", value: acceptLanguage },
   ];
+}
+
+function getRegionHeaderValues() {
+  return {
+    userAgent: WINDOWS_USER_AGENT,
+    acceptLanguage: getAcceptLanguageForCountry(proxyCountryCode),
+  };
 }
 
 function applyWindowsUserAgentRule(enable) {
@@ -380,11 +397,9 @@ if (IS_FIREFOX && webRequestAPI && webRequestAPI.onBeforeSendHeaders) {
         const headers = details.requestHeaders.filter(
           (h) => !drop.includes(h.name.toLowerCase()),
         );
-        headers.push({ name: "User-Agent", value: WINDOWS_USER_AGENT });
-        headers.push({
-          name: "Accept-Language",
-          value: getAcceptLanguageForCountry(proxyCountryCode),
-        });
+        const { userAgent, acceptLanguage } = getRegionHeaderValues();
+        headers.push({ name: "User-Agent", value: userAgent });
+        headers.push({ name: "Accept-Language", value: acceptLanguage });
         return { requestHeaders: headers };
       },
       { urls: ["<all_urls>"] },
@@ -611,21 +626,157 @@ function loadServersFromDecodoAPI(apiKey) {
  * @returns {Promise<{ dedicatedServers: Array, randomServers: Array }>}
  */
 function getServersSource() {
+  // In-memory cache to avoid re-fetching CSV/Decodo endpoints on every popup "getState".
+  // Cache lifetime: background page lifetime (until extension reload).
+  if (!getServersSource._csvPromise) {
+    getServersSource._csvPromise = loadDefaultServersFromCSV().catch(() => ({
+      dedicatedServers: [],
+      randomServers: [],
+    }));
+  }
+
+  if (!getServersSource._decodoPromises) {
+    getServersSource._decodoPromises = new Map();
+  }
+
   return new Promise((resolve) => {
     chrome.storage.local.get(["decodoApiKey"], (keyData) => {
       const apiKey = (keyData.decodoApiKey || "").trim();
-      loadDefaultServersFromCSV().then(({ dedicatedServers: csvDedicated, randomServers }) => {
-        if (apiKey) {
-          loadServersFromDecodoAPI(apiKey).then((decodoServers) => {
-            const dedicatedServers = (csvDedicated || []).concat(decodoServers || []);
-            resolve({ dedicatedServers, randomServers: randomServers || [] });
+      const csvPromise = getServersSource._csvPromise;
+
+      if (!apiKey) {
+        csvPromise.then(({ dedicatedServers, randomServers }) => {
+          resolve({
+            dedicatedServers: dedicatedServers || [],
+            randomServers: randomServers || [],
           });
-        } else {
-          resolve({ dedicatedServers: csvDedicated || [], randomServers: randomServers || [] });
-        }
-      });
+        });
+        return;
+      }
+
+      const decodoPromises = getServersSource._decodoPromises;
+      if (!decodoPromises.has(apiKey)) {
+        decodoPromises.set(
+          apiKey,
+          loadServersFromDecodoAPI(apiKey).catch(() => []),
+        );
+      }
+
+      Promise.all([csvPromise, decodoPromises.get(apiKey)]).then(
+        ([csv, decodoServers]) => {
+          const dedicatedServers = (csv.dedicatedServers || []).concat(decodoServers || []);
+          resolve({ dedicatedServers, randomServers: csv.randomServers || [] });
+        },
+      );
     });
   });
+}
+
+function storageLocalGet(keys) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(keys, (data) => resolve(data));
+  });
+}
+
+function storageLocalSet(data) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set(data, () => resolve());
+  });
+}
+
+async function handleGetState(sendResponse) {
+  try {
+    const [incognitoAllowed, servers, data] = await Promise.all([
+      isPrivateBrowsingAllowed().catch(() => false),
+      getServersSource(),
+      storageLocalGet([
+        "enabled",
+        "host",
+        "port",
+        "type",
+        "proxyCountryCode",
+        "isRandomConnection",
+        "proxyUsername",
+        "proxyPassword",
+      ]),
+    ]);
+
+    sendResponse({
+      ...DEFAULT_CONFIG,
+      ...data,
+      proxyCountryCode: normalizeCountryCode(data.proxyCountryCode),
+      dedicatedServers: servers.dedicatedServers || [],
+      randomServers: servers.randomServers || [],
+      isRandomConnection: !!data.isRandomConnection,
+      incognitoAllowed: !!incognitoAllowed,
+      trafficStats: { ...trafficStats },
+    });
+  } catch (err) {
+    // Fallback: never leave popup/options without a response.
+    sendResponse({
+      ...DEFAULT_CONFIG,
+      dedicatedServers: [],
+      randomServers: [],
+      isRandomConnection: false,
+      incognitoAllowed: false,
+      trafficStats: { ...trafficStats },
+    });
+  }
+}
+
+async function handleSetState(payload, sendResponse) {
+  const {
+    enabled,
+    host,
+    port,
+    type,
+    username,
+    password,
+    countryCode,
+    isRandomConnection,
+  } = payload || {};
+
+  const proxyUsername = username ?? "";
+  const proxyPassword = password ?? "";
+  proxyCountryCode = enabled && countryCode ? normalizeCountryCode(countryCode) : "";
+
+  try {
+    const allowed = await isPrivateBrowsingAllowed();
+    if (!allowed) {
+      sendResponse({ success: false, error: "private_browsing_required" });
+      return;
+    }
+
+    await storageLocalSet({
+      enabled: !!enabled,
+      host: host ?? "",
+      port: port ?? DEFAULT_CONFIG.port,
+      type: type ?? DEFAULT_CONFIG.type,
+      proxyUsername,
+      proxyPassword,
+      proxyCountryCode: proxyCountryCode,
+      isRandomConnection: !!isRandomConnection,
+    });
+
+    if (enabled && host && port) {
+      proxyAuth = {
+        host,
+        port: port ?? DEFAULT_CONFIG.port,
+        username: proxyUsername,
+        password: proxyPassword,
+      };
+      setProxyEnabled(true);
+      await applyProxy({ host, port, type: type ?? DEFAULT_CONFIG.type });
+      sendResponse({ success: true });
+      return;
+    }
+
+    proxyAuth = { host: "", port: 0, username: "", password: "" };
+    await clearProxy();
+    sendResponse({ success: true });
+  } catch (err) {
+    sendResponse({ success: false, error: String(err) });
+  }
 }
 
 // Listen for messages from popup/options to toggle or update proxy
@@ -634,97 +785,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ trafficStats: { ...trafficStats } });
     return false;
   }
+
   if (message.action === "getState") {
-    const incognitoAllowedPromise = isPrivateBrowsingAllowed();
-    getServersSource().then(({ dedicatedServers, randomServers }) => {
-      chrome.storage.local.get(
-        ["enabled", "host", "port", "type", "proxyCountryCode", "isRandomConnection", "proxyUsername", "proxyPassword"],
-        (data) => {
-          incognitoAllowedPromise
-            .then((incognitoAllowed) => {
-              sendResponse({
-                ...DEFAULT_CONFIG,
-                ...data,
-                proxyCountryCode: normalizeCountryCode(data.proxyCountryCode),
-                dedicatedServers: dedicatedServers || [],
-                randomServers: randomServers || [],
-                isRandomConnection: !!data.isRandomConnection,
-                incognitoAllowed: !!incognitoAllowed,
-                trafficStats: { ...trafficStats },
-              });
-            })
-            .catch(() => {
-              sendResponse({
-                ...DEFAULT_CONFIG,
-                ...data,
-                proxyCountryCode: normalizeCountryCode(data.proxyCountryCode),
-                dedicatedServers: dedicatedServers || [],
-                randomServers: randomServers || [],
-                isRandomConnection: !!data.isRandomConnection,
-                incognitoAllowed: false,
-                trafficStats: { ...trafficStats },
-              });
-            });
-        },
-      );
-    });
+    void handleGetState(sendResponse);
     return true; // async response
   }
+
   if (message.action === "setState") {
-    const { enabled, host, port, type, username, password, countryCode, isRandomConnection } =
-      message.payload || {};
-    const proxyUsername = username ?? "";
-    const proxyPassword = password ?? "";
-    proxyCountryCode = enabled && countryCode ? normalizeCountryCode(countryCode) : "";
-    isPrivateBrowsingAllowed()
-      .then((allowed) => {
-        if (!allowed) {
-          sendResponse({ success: false, error: "private_browsing_required" });
-          return;
-        }
-        chrome.storage.local.set(
-          {
-            enabled: !!enabled,
-            host: host ?? "",
-            port: port ?? DEFAULT_CONFIG.port,
-            type: type ?? DEFAULT_CONFIG.type,
-            proxyUsername,
-            proxyPassword,
-            proxyCountryCode: proxyCountryCode,
-            isRandomConnection: !!isRandomConnection,
-          },
-          () => {
-            if (enabled && host && port) {
-              proxyAuth = {
-                host,
-                port: port ?? DEFAULT_CONFIG.port,
-                username: proxyUsername,
-                password: proxyPassword,
-              };
-              setProxyEnabled(true);
-              Promise.resolve(
-                applyProxy({ host, port, type: type ?? DEFAULT_CONFIG.type }),
-              )
-                .then(() => sendResponse({ success: true }))
-                .catch((err) =>
-                  sendResponse({ success: false, error: String(err) }),
-                );
-              return;
-            } else {
-              proxyAuth = { host: "", port: 0, username: "", password: "" };
-              Promise.resolve(clearProxy())
-                .then(() => sendResponse({ success: true }))
-                .catch((err) =>
-                  sendResponse({ success: false, error: String(err) }),
-                );
-              return;
-            }
-          },
-        );
-      })
-      .catch((err) => sendResponse({ success: false, error: String(err) }));
-    return true;
+    void handleSetState(message.payload, sendResponse);
+    return true; // async response
   }
+
   if (message.action === "openvpnNative") {
     const nativeName = "com.vpn_cx_proxy.openvpn";
     try {
@@ -747,5 +818,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     return true;
   }
+
   return false;
 });

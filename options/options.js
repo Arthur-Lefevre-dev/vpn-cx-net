@@ -84,9 +84,8 @@ function renderAboutAddonsStep(stepEl, stepRaw) {
     a.dataset.bound = "1";
   }
   a.addEventListener("click", (e) => {
-    // Firefox may block about:* navigation from extension pages.
-    // We prevent default so the flow doesn't error, then open (best effort) and copy.
-    e.preventDefault();
+    // Best-effort open + clipboard backup.
+    // We do NOT block default navigation so that it remains a real link when allowed.
     try {
       window.open("about:addons", "_blank", "noopener");
     } catch {
@@ -131,6 +130,29 @@ function applyLocale() {
   document.title = getMessage("settingsTitle");
 }
 
+function updatePrivateBrowsingWarning() {
+  if (!privateBrowsingWarningWrap || !chrome?.runtime?.sendMessage) return;
+  chrome.runtime.sendMessage({ action: "getState" }, (state) => {
+    const incognitoAllowed = !!(state && state.incognitoAllowed);
+    privateBrowsingWarningWrap.hidden = incognitoAllowed;
+    if (!incognitoAllowed) {
+      if (privateBrowsingWarningTitle)
+        privateBrowsingWarningTitle.textContent = t("privateBrowsingStepsTitle");
+      if (privateBrowsingWarningText)
+        privateBrowsingWarningText.textContent = t("privateBrowsingRequired");
+      if (privateBrowsingWarningStep1)
+        renderAboutAddonsStep(
+          privateBrowsingWarningStep1,
+          t("privateBrowsingStep1"),
+        );
+      if (privateBrowsingWarningStep2)
+        privateBrowsingWarningStep2.textContent = t("privateBrowsingStep2");
+      if (privateBrowsingWarningStep3)
+        privateBrowsingWarningStep3.textContent = t("privateBrowsingStep3");
+    }
+  });
+}
+
 function loadOptions() {
   chrome.storage.local.get(["ovpnPath", "decodoApiKey", "locale"], (data) => {
     if (ovpnPathInput) ovpnPathInput.value = data.ovpnPath || "";
@@ -138,29 +160,7 @@ function loadOptions() {
     if (typeof setLocale !== "undefined") setLocale(data.locale || "en");
     applyLocale();
     if (localeSelect) localeSelect.value = data.locale === "fr" ? "fr" : "en";
-
-    // Show Private Browsing instructions only when needed.
-    if (privateBrowsingWarningWrap && chrome?.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({ action: "getState" }, (state) => {
-        const incognitoAllowed = !!(state && state.incognitoAllowed);
-        privateBrowsingWarningWrap.hidden = incognitoAllowed;
-        if (!incognitoAllowed) {
-          if (privateBrowsingWarningTitle)
-            privateBrowsingWarningTitle.textContent = t("privateBrowsingStepsTitle");
-          if (privateBrowsingWarningText)
-            privateBrowsingWarningText.textContent = t("privateBrowsingRequired");
-          if (privateBrowsingWarningStep1)
-            renderAboutAddonsStep(
-              privateBrowsingWarningStep1,
-              t("privateBrowsingStep1"),
-            );
-          if (privateBrowsingWarningStep2)
-            privateBrowsingWarningStep2.textContent = t("privateBrowsingStep2");
-          if (privateBrowsingWarningStep3)
-            privateBrowsingWarningStep3.textContent = t("privateBrowsingStep3");
-        }
-      });
-    }
+    updatePrivateBrowsingWarning();
   });
 }
 
@@ -233,6 +233,7 @@ if (localeSelect) {
     chrome.storage.local.set({ locale }, () => {
       if (typeof setLocale !== "undefined") setLocale(locale);
       applyLocale();
+      updatePrivateBrowsingWarning();
     });
   });
 }

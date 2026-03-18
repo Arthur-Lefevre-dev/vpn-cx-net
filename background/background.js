@@ -151,35 +151,48 @@ function getFirefoxProxySettings(config) {
  */
 function applyProxy(config) {
   if (!config.host || !config.port) {
-    clearProxy();
-    setProxyEnabled(false);
-    return;
+    return Promise.resolve().then(() => {
+      clearProxy();
+      setProxyEnabled(false);
+    });
   }
   setProxyEnabled(true);
   if (IS_FIREFOX) {
     try {
       const p = proxyAPI.settings.set({ value: getFirefoxProxySettings(config) });
-      if (p && typeof p.catch === "function") {
-        p.catch((err) =>
-          console.error("Firefox proxy set failed:", err, config),
-        );
-      }
       console.log("Firefox proxy set:", config, getFirefoxProxySettings(config));
+      if (p && typeof p.catch === "function") {
+        return p.catch((err) => {
+          console.error("Firefox proxy set failed:", err, config);
+          throw err;
+        });
+      }
+      return Promise.resolve();
     } catch (err) {
       console.error("Firefox proxy set threw:", err);
+      return Promise.reject(err);
     }
   } else {
-    chrome.proxy.settings.set(
-      {
-        value: getChromeProxyConfig(config),
-        scope: "regular",
-      },
-      () => {
-        if (chrome.runtime.lastError) {
-          console.error("Proxy set error:", chrome.runtime.lastError);
-        }
-      },
-    );
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.proxy.settings.set(
+          {
+            value: getChromeProxyConfig(config),
+            scope: "regular",
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error("Proxy set error:", chrome.runtime.lastError);
+              reject(chrome.runtime.lastError);
+              return;
+            }
+            resolve();
+          },
+        );
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
 }
 
@@ -191,17 +204,31 @@ function clearProxy() {
   if (IS_FIREFOX) {
     try {
       const p = proxyAPI.settings.set({ value: { proxyType: "none" } });
-      if (p && typeof p.catch === "function") {
-        p.catch((err) => console.error("Firefox proxy clear failed:", err));
-      }
       console.log("Firefox proxy cleared");
+      if (p && typeof p.catch === "function") {
+        return p.catch((err) => {
+          console.error("Firefox proxy clear failed:", err);
+          throw err;
+        });
+      }
+      return Promise.resolve();
     } catch (err) {
       console.error("Firefox proxy clear threw:", err);
+      return Promise.reject(err);
     }
   } else {
-    chrome.proxy.settings.clear({ scope: "regular" }, () => {
-      if (chrome.runtime.lastError) {
-        console.error("Proxy clear error:", chrome.runtime.lastError);
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.proxy.settings.clear({ scope: "regular" }, () => {
+          if (chrome.runtime.lastError) {
+            console.error("Proxy clear error:", chrome.runtime.lastError);
+            reject(chrome.runtime.lastError);
+            return;
+          }
+          resolve();
+        });
+      } catch (e) {
+        reject(e);
       }
     });
   }
@@ -626,12 +653,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             password: proxyPassword,
           };
           setProxyEnabled(true);
-          applyProxy({ host, port, type: type ?? DEFAULT_CONFIG.type });
+          Promise.resolve(
+            applyProxy({ host, port, type: type ?? DEFAULT_CONFIG.type }),
+          )
+            .then(() => sendResponse({ success: true }))
+            .catch((err) =>
+              sendResponse({ success: false, error: String(err) }),
+            );
+          return;
         } else {
           proxyAuth = { host: "", port: 0, username: "", password: "" };
-          clearProxy();
+          Promise.resolve(clearProxy())
+            .then(() => sendResponse({ success: true }))
+            .catch((err) =>
+              sendResponse({ success: false, error: String(err) }),
+            );
+          return;
         }
-        sendResponse({ success: true });
       },
     );
     return true;

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VPN CX Net",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Configure and toggle HTTP/SOCKS proxy for Chrome and Firefox",
   "permissions": [
     "proxy",

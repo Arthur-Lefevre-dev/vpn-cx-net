@@ -105,6 +105,8 @@ body {
   flex-shrink: 0;
   background: var(--text-muted);
   transition: background 0.2s;
+  position: relative;
+  overflow: visible;
 }
 
 .status-dot.active {
@@ -114,6 +116,47 @@ body {
 
 .status-dot.inactive {
   background: var(--text-muted);
+}
+
+@keyframes statusSpin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.status.is-loading .status-dot {
+  background: var(--primary);
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.35);
+  animation: statusPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.status.is-loading .status-dot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(99, 102, 241, 0.35);
+  border-top-color: rgba(99, 102, 241, 1);
+  transform: translate(-50%, -50%);
+  animation: statusSpin 0.8s linear infinite;
 }
 
 .status-text {

@@ -4,6 +4,7 @@
 
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
+const statusEl = document.getElementById("status");
 const proxyInfo = document.getElementById("proxyInfo");
 const serverSelectWrap = document.getElementById("serverSelectWrap");
 const serverSelectTrigger = document.getElementById("serverSelectTrigger");
@@ -62,6 +63,29 @@ function serverCountryCode(server) {
 }
 
 const RANDOM_INDEX = "random";
+
+const MIN_PROXY_LOADING_MS = 700;
+let proxyLoadingStartedAt = 0;
+
+function beginProxyLoading() {
+  proxyLoadingStartedAt = Date.now();
+  if (statusText) statusText.textContent = msg("loading", "Loading…");
+  if (statusEl) statusEl.classList.add("is-loading");
+  if (statusDot) {
+    statusDot.classList.remove("active");
+    statusDot.classList.add("inactive");
+  }
+  if (toggleBtn) toggleBtn.disabled = true;
+}
+
+function finishProxyLoading(next) {
+  const elapsed = Date.now() - proxyLoadingStartedAt;
+  const wait = Math.max(0, MIN_PROXY_LOADING_MS - elapsed);
+  setTimeout(() => {
+    if (typeof next === "function") next();
+    if (statusEl) statusEl.classList.remove("is-loading");
+  }, wait);
+}
 
 /** Update current selection display: trigger value, big flag block, and optional container. */
 function setSelectionDisplay(serverOrNull) {
@@ -283,12 +307,13 @@ if (serverSelectDropdown) {
       setSelectionDisplay(null);
       selectedIndex = -1;
       closeDropdown();
+      beginProxyLoading();
       chrome.runtime.sendMessage(
         {
           action: "setState",
           payload: { enabled: false, host: "", port: 0, type: "http", isRandomConnection: false },
         },
-        () => loadState(),
+        () => finishProxyLoading(loadState),
       );
       return;
     }
@@ -298,6 +323,7 @@ if (serverSelectDropdown) {
       selectedIndex = RANDOM_INDEX;
       setSelectionDisplay({ isRandom: true });
       closeDropdown();
+      beginProxyLoading();
       chrome.runtime.sendMessage(
         {
           action: "setState",
@@ -312,7 +338,7 @@ if (serverSelectDropdown) {
             isRandomConnection: true,
           },
         },
-        () => loadState(),
+        () => finishProxyLoading(loadState),
       );
       return;
     }
@@ -322,6 +348,7 @@ if (serverSelectDropdown) {
     selectedIndex = i;
     setSelectionDisplay(server);
     closeDropdown();
+    beginProxyLoading();
     chrome.runtime.sendMessage(
       {
         action: "setState",
@@ -336,7 +363,7 @@ if (serverSelectDropdown) {
           isRandomConnection: false,
         },
       },
-      () => loadState(),
+      () => finishProxyLoading(loadState),
     );
   });
 }
@@ -412,9 +439,10 @@ if (toggleBtn) {
       }
       if (nextEnabled && state.proxyUsername != null) payload.username = state.proxyUsername;
       if (nextEnabled && state.proxyPassword != null) payload.password = state.proxyPassword;
+      beginProxyLoading();
       chrome.runtime.sendMessage(
         { action: "setState", payload },
-        () => loadState(),
+        () => finishProxyLoading(loadState),
       );
     });
   });

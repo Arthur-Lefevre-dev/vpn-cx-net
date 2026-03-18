@@ -222,7 +222,10 @@ function renderState(state) {
   }
 
   if (!serverSelectDropdown) return;
-  serverSelectDropdown.innerHTML = "";
+  // Avoid `innerHTML` assignment for production safety.
+  while (serverSelectDropdown.firstChild) {
+    serverSelectDropdown.removeChild(serverSelectDropdown.firstChild);
+  }
   const hasOptions = servers.length > 0 || currentRandomServers.length > 0;
   if (hasOptions && serverSelectWrap) {
     serverSelectWrap.hidden = false;

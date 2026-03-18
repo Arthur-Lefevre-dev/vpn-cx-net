@@ -14,7 +14,7 @@
       privateBrowsingOpenOptions: "Open options",
       privateBrowsingStepsTitle: "Enable Private Browsing (Firefox)",
       privateBrowsingStep1:
-        '1. Open <a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
+        'Open <a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
       privateBrowsingStep2: "Find “VPN CX NET” in Extensions",
       privateBrowsingStep3:
         "Turn on “Run in Private Windows” → set it to “Allow”",
@@ -68,7 +68,7 @@
       privateBrowsingOpenOptions: "Ouvrir les paramètres",
       privateBrowsingStepsTitle: "Activer la navigation privée (Firefox)",
       privateBrowsingStep1:
-        '1. Ouvrez <a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
+        'Ouvrez <a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
       privateBrowsingStep2: "Trouvez “VPN CX NET” dans les extensions",
       privateBrowsingStep3:
         "Activez “Run in Private Windows” → mettez sur “Allow”",

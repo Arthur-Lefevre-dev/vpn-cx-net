@@ -39,6 +39,71 @@ function setOpenVpnStatus(text, isError) {
   }
 }
 
+function renderAboutAddonsStep(stepEl, stepRaw) {
+  // Avoid assigning untrusted HTML to `innerHTML` (store violations).
+  // We parse the i18n string to extract the text around the about:addons anchor,
+  // then build the clickable link via DOM APIs.
+  if (!stepEl) return;
+  const raw = (stepRaw || "").toString();
+
+  const anchorTagRe = /<a[^>]*href=["']about:addons["'][^>]*>\s*about:addons\s*<\/a>/i;
+  const m = raw.match(anchorTagRe);
+
+  let prefixRaw = "";
+  let suffixRaw = "";
+  if (m && typeof m.index === "number") {
+    prefixRaw = raw.slice(0, m.index);
+    suffixRaw = raw.slice(m.index + m[0].length);
+  } else {
+    const idx = raw.indexOf("about:addons");
+    if (idx >= 0) {
+      prefixRaw = raw.slice(0, idx);
+      suffixRaw = raw.slice(idx + "about:addons".length);
+    } else {
+      // Fallback: if we can't parse, still show the URL.
+      prefixRaw = raw;
+      suffixRaw = "";
+    }
+  }
+
+  // Strip any remaining tags (should be none after the extraction).
+  const stripTags = (s) => s.replace(/<[^>]*>/g, "");
+  const prefixText = stripTags(prefixRaw);
+  const suffixText = stripTags(suffixRaw);
+
+  // Clear and rebuild.
+  while (stepEl.firstChild) stepEl.removeChild(stepEl.firstChild);
+  if (prefixText) stepEl.appendChild(document.createTextNode(prefixText));
+
+  const a = document.createElement("a");
+  a.href = "about:addons";
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.textContent = "about:addons";
+  if (!a.dataset.bound) {
+    a.dataset.bound = "1";
+  }
+  a.addEventListener("click", (e) => {
+    // Firefox may block about:* navigation from extension pages.
+    // We prevent default so the flow doesn't error, then open (best effort) and copy.
+    e.preventDefault();
+    try {
+      window.open("about:addons", "_blank", "noopener");
+    } catch {
+      // ignored
+    }
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText("about:addons")
+        .then(() => showMessage(t("aboutAddonsCopied"), "success"))
+        .catch(() => showMessage(t("aboutAddonsCopyFailed"), "error"));
+    }
+  });
+
+  stepEl.appendChild(a);
+  if (suffixText) stepEl.appendChild(document.createTextNode(suffixText));
+}
+
 /** Apply current locale to all option page strings (call after setLocale). */
 function applyLocale() {
   if (typeof getMessage === "undefined") return;
@@ -85,56 +150,14 @@ function loadOptions() {
           if (privateBrowsingWarningText)
             privateBrowsingWarningText.textContent = t("privateBrowsingRequired");
           if (privateBrowsingWarningStep1)
-            {
-              // Ensure about:addons is a real clickable <a href="about:addons">.
-              // (Some environments can render the string as plain text.)
-              const step1Html = t("privateBrowsingStep1");
-              privateBrowsingWarningStep1.innerHTML = step1Html;
-
-              const existing = privateBrowsingWarningStep1.querySelector(
-                'a[href="about:addons"]',
-              );
-              if (!existing) {
-                privateBrowsingWarningStep1.innerHTML = step1Html.replace(
-                  /about:addons/g,
-                  '<a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
-                );
-              }
-            }
+            renderAboutAddonsStep(
+              privateBrowsingWarningStep1,
+              t("privateBrowsingStep1"),
+            );
           if (privateBrowsingWarningStep2)
             privateBrowsingWarningStep2.textContent = t("privateBrowsingStep2");
           if (privateBrowsingWarningStep3)
             privateBrowsingWarningStep3.textContent = t("privateBrowsingStep3");
-
-          // Clipboard backup: if Firefox blocks navigation to about:*,
-          // the user still gets the URL in clipboard.
-          if (privateBrowsingWarningStep1) {
-            const a = privateBrowsingWarningStep1.querySelector(
-              'a[href="about:addons"]',
-            );
-            if (a && !a.dataset.bound) {
-              a.dataset.bound = "1";
-              a.addEventListener("click", (e) => {
-                e.preventDefault();
-
-                // Try to open first (may be blocked by Firefox).
-                try {
-                  window.open("about:addons", "_blank", "noopener");
-                } catch {
-                  // Ignored: we still copy to clipboard below.
-                }
-
-                if (navigator.clipboard?.writeText) {
-                  navigator.clipboard
-                    .writeText("about:addons")
-                    .then(() => showMessage(t("aboutAddonsCopied"), "success"))
-                    .catch(() =>
-                      showMessage(t("aboutAddonsCopyFailed"), "error"),
-                    );
-                }
-              });
-            }
-          }
         }
       });
     }

@@ -11,11 +11,15 @@
       proxyDisabled: "Proxy disabled",
       privateBrowsingRequired:
         "Firefox: enable Private Browsing access for this extension.",
+      privateBrowsingOpenOptions: "Open options",
       privateBrowsingStepsTitle: "Enable Private Browsing (Firefox)",
-      privateBrowsingStep1: "Open about:addons",
+      privateBrowsingStep1:
+        '1. Open <a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
       privateBrowsingStep2: "Find “VPN CX NET” in Extensions",
       privateBrowsingStep3:
         "Turn on “Run in Private Windows” → set it to “Allow”",
+      aboutAddonsCopied: "about:addons copied",
+      aboutAddonsCopyFailed: "Copy failed",
       trafficDown: "↓ Download",
       trafficUp: "↑ Upload",
       trafficTotal: "Total",
@@ -61,11 +65,15 @@
       proxyDisabled: "Proxy désactivé",
       privateBrowsingRequired:
         "Firefox : autorisez l’accès en navigation privée pour cette extension.",
+      privateBrowsingOpenOptions: "Ouvrir les paramètres",
       privateBrowsingStepsTitle: "Activer la navigation privée (Firefox)",
-      privateBrowsingStep1: "Ouvrez about:addons",
+      privateBrowsingStep1:
+        '1. Ouvrez <a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
       privateBrowsingStep2: "Trouvez “VPN CX NET” dans les extensions",
       privateBrowsingStep3:
         "Activez “Run in Private Windows” → mettez sur “Allow”",
+      aboutAddonsCopied: "about:addons copié",
+      aboutAddonsCopyFailed: "Copie impossible",
       trafficDown: "↓ Descendant",
       trafficUp: "↑ Montant",
       trafficTotal: "Total",

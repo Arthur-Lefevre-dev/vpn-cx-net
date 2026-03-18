@@ -9,6 +9,12 @@ const openvpnStatus = document.getElementById("openvpnStatus");
 const decodoApiKeyInput = document.getElementById("decodoApiKey");
 const messageEl = document.getElementById("message");
 const localeSelect = document.getElementById("localeSelect");
+const privateBrowsingWarningWrap = document.getElementById("privateBrowsingWarningWrap");
+const privateBrowsingWarningTitle = document.getElementById("privateBrowsingWarningTitle");
+const privateBrowsingWarningText = document.getElementById("privateBrowsingWarningText");
+const privateBrowsingWarningStep1 = document.getElementById("privateBrowsingWarningStep1");
+const privateBrowsingWarningStep2 = document.getElementById("privateBrowsingWarningStep2");
+const privateBrowsingWarningStep3 = document.getElementById("privateBrowsingWarningStep3");
 
 /** Safe i18n (locales.js loaded before options.js). */
 const t = typeof getMessage !== "undefined" ? getMessage : (k) => k;
@@ -67,6 +73,60 @@ function loadOptions() {
     if (typeof setLocale !== "undefined") setLocale(data.locale || "en");
     applyLocale();
     if (localeSelect) localeSelect.value = data.locale === "fr" ? "fr" : "en";
+
+    // Show Private Browsing instructions only when needed.
+    if (privateBrowsingWarningWrap && chrome?.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ action: "getState" }, (state) => {
+        const incognitoAllowed = !!(state && state.incognitoAllowed);
+        privateBrowsingWarningWrap.hidden = incognitoAllowed;
+        if (!incognitoAllowed) {
+          if (privateBrowsingWarningTitle)
+            privateBrowsingWarningTitle.textContent = t("privateBrowsingStepsTitle");
+          if (privateBrowsingWarningText)
+            privateBrowsingWarningText.textContent = t("privateBrowsingRequired");
+          if (privateBrowsingWarningStep1)
+            {
+              const step1 = t("privateBrowsingStep1");
+              // Fallback: if translation does not include the <a> tag,
+              // wrap "about:addons" into a clickable URL anyway.
+              privateBrowsingWarningStep1.innerHTML = step1.includes("about:addons")
+                ? step1.includes('<a ')
+                  ? step1
+                  : step1.replace(
+                      /about:addons/g,
+                      '<a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
+                    )
+                : step1;
+            }
+          if (privateBrowsingWarningStep2)
+            privateBrowsingWarningStep2.textContent = t("privateBrowsingStep2");
+          if (privateBrowsingWarningStep3)
+            privateBrowsingWarningStep3.textContent = t("privateBrowsingStep3");
+
+          // Clipboard backup: if Firefox blocks the about:* navigation, the user still has the URL.
+          if (privateBrowsingWarningStep1) {
+            const a = privateBrowsingWarningStep1.querySelector(
+              'a[href="about:addons"]',
+            );
+            if (a && !a.dataset.bound) {
+              a.dataset.bound = "1";
+              a.addEventListener("click", (e) => {
+                // Backup copy: even if Firefox blocks the navigation,
+                // the user still gets "about:addons" in clipboard.
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard
+                    .writeText("about:addons")
+                    .then(() => showMessage(t("aboutAddonsCopied"), "success"))
+                    .catch(() =>
+                      showMessage(t("aboutAddonsCopyFailed"), "error"),
+                    );
+                }
+              });
+            }
+          }
+        }
+      });
+    }
   });
 }
 

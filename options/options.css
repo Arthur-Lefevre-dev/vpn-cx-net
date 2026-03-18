@@ -175,6 +175,34 @@ input[type="checkbox"] {
   font-size: 12px;
 }
 
+.private-browsing-warning {
+  margin-top: 24px;
+  padding: 14px 14px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius);
+}
+
+.private-browsing-warning .section-title {
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.private-browsing-steps-list {
+  margin-left: 18px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.private-browsing-steps-list li {
+  margin: 6px 0;
+}
+
+.private-browsing-steps-list a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .openvpn-section {
   margin-top: 32px;
   padding-top: 24px;

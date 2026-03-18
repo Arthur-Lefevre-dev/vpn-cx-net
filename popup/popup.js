@@ -10,6 +10,7 @@ const privateBrowsingStepsTitle = document.getElementById("privateBrowsingStepsT
 const pbStep1 = document.getElementById("pbStep1");
 const pbStep2 = document.getElementById("pbStep2");
 const pbStep3 = document.getElementById("pbStep3");
+const privateBrowsingOptionsLink = document.getElementById("privateBrowsingOptionsLink");
 const proxyInfo = document.getElementById("proxyInfo");
 const serverSelectWrap = document.getElementById("serverSelectWrap");
 const serverSelectTrigger = document.getElementById("serverSelectTrigger");
@@ -24,6 +25,62 @@ const trafficDown = document.getElementById("trafficDown");
 const trafficUp = document.getElementById("trafficUp");
 const trafficTotal = document.getElementById("trafficTotal");
 const localeSelect = document.getElementById("localeSelect");
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function bindAboutAddonsLink() {
+  if (!pbStep1) return;
+  const a = pbStep1.querySelector('a[href="about:addons"]');
+  if (!a) return;
+  if (a.dataset.bound === "1") return;
+  a.dataset.bound = "1";
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    const url = "about:addons";
+    copyTextToClipboard(url)
+      .then(() => {
+        if (statusText)
+          statusText.textContent = msg(
+            "aboutAddonsCopied",
+            "about:addons copied",
+          );
+        if (statusEl) statusEl.classList.remove("is-blocked");
+        setTimeout(() => loadState(), 250);
+      })
+      .catch(() => {
+        if (statusText)
+          statusText.textContent = msg(
+            "aboutAddonsCopyFailed",
+            "Copy failed",
+          );
+      });
+  });
+}
+
+// Link from the popup to the Options page (shown when Private Browsing is not allowed).
+if (privateBrowsingOptionsLink && chrome?.runtime?.getURL) {
+  privateBrowsingOptionsLink.href = chrome.runtime.getURL(
+    "options/options.html",
+  );
+  privateBrowsingOptionsLink.target = "_blank";
+}
 
 /** Safe i18n: use getMessage when locales.js is loaded, else fallback/key. */
 function msg(key, fallback) {
@@ -176,21 +233,15 @@ function renderState(state) {
     );
   }
   if (privateBrowsingStepsWrap) {
-    privateBrowsingStepsWrap.hidden = incognitoAllowed;
-    if (!incognitoAllowed) {
-      if (privateBrowsingStepsTitle)
-        privateBrowsingStepsTitle.textContent = msg(
-          "privateBrowsingStepsTitle",
-          "Enable Private Browsing (Firefox)",
-        );
-      if (pbStep1) pbStep1.textContent = msg("privateBrowsingStep1", "1. Open about:addons");
-      if (pbStep2) pbStep2.textContent = msg("privateBrowsingStep2", '2. Find "VPN CX NET"');
-      if (pbStep3)
-        pbStep3.textContent = msg(
-          "privateBrowsingStep3",
-          "3. Enable “Run in Private Windows” → set to “Allow”",
-        );
-    }
+    // Tutorial moved to the Options page.
+    privateBrowsingStepsWrap.hidden = true;
+  }
+  if (privateBrowsingOptionsLink) {
+    privateBrowsingOptionsLink.hidden = incognitoAllowed;
+    privateBrowsingOptionsLink.textContent = msg(
+      "privateBrowsingOpenOptions",
+      "Open options",
+    );
   }
 
   const traffic = state.trafficStats || {};

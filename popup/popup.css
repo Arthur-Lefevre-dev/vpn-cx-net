@@ -98,6 +98,13 @@ body {
   border-radius: var(--radius);
 }
 
+.status-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
 .status-dot {
   width: 10px;
   height: 10px;
@@ -194,6 +201,19 @@ body {
 
 .private-browsing-steps-list li {
   margin: 6px 0;
+}
+
+.private-browsing-steps-list a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.private-browsing-options-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: underline;
+  white-space: normal;
 }
 
 .current-country {

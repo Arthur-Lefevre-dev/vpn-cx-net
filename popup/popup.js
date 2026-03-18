@@ -5,6 +5,11 @@
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
 const statusEl = document.getElementById("status");
+const privateBrowsingStepsWrap = document.getElementById("privateBrowsingStepsWrap");
+const privateBrowsingStepsTitle = document.getElementById("privateBrowsingStepsTitle");
+const pbStep1 = document.getElementById("pbStep1");
+const pbStep2 = document.getElementById("pbStep2");
+const pbStep3 = document.getElementById("pbStep3");
 const proxyInfo = document.getElementById("proxyInfo");
 const serverSelectWrap = document.getElementById("serverSelectWrap");
 const serverSelectTrigger = document.getElementById("serverSelectTrigger");
@@ -141,10 +146,12 @@ function formatBytes(bytes) {
 let currentServers = [];
 let currentRandomServers = [];
 let selectedIndex = -1;
+let incognitoAllowed = true;
 
 function renderState(state) {
   const enabled = !!state.enabled;
   const hasConfig = !!(state.host && state.port);
+  incognitoAllowed = state.incognitoAllowed !== false;
   const all = (state.dedicatedServers || []).slice();
   const localServers = all.filter((s) => !s.fromDecodo);
   const decodoServers = all.filter((s) => s.fromDecodo);
@@ -160,6 +167,31 @@ function renderState(state) {
   }
   if (statusText)
     statusText.textContent = enabled ? msg("proxyActive", "Proxy active") : msg("proxyDisabled", "Proxy disabled");
+
+  if (statusEl) statusEl.classList.toggle("is-blocked", !incognitoAllowed);
+  if (!incognitoAllowed && statusText) {
+    statusText.textContent = msg(
+      "privateBrowsingRequired",
+      "Firefox: enable Private Browsing access for this extension."
+    );
+  }
+  if (privateBrowsingStepsWrap) {
+    privateBrowsingStepsWrap.hidden = incognitoAllowed;
+    if (!incognitoAllowed) {
+      if (privateBrowsingStepsTitle)
+        privateBrowsingStepsTitle.textContent = msg(
+          "privateBrowsingStepsTitle",
+          "Enable Private Browsing (Firefox)",
+        );
+      if (pbStep1) pbStep1.textContent = msg("privateBrowsingStep1", "1. Open about:addons");
+      if (pbStep2) pbStep2.textContent = msg("privateBrowsingStep2", '2. Find "VPN CX NET"');
+      if (pbStep3)
+        pbStep3.textContent = msg(
+          "privateBrowsingStep3",
+          "3. Enable “Run in Private Windows” → set to “Allow”",
+        );
+    }
+  }
 
   const traffic = state.trafficStats || {};
   const down = traffic.downloadBytes != null ? traffic.downloadBytes : 0;
@@ -258,6 +290,7 @@ function renderState(state) {
 
   if (toggleBtn) {
     toggleBtn.disabled = !hasConfig && !enabled;
+    if (!incognitoAllowed) toggleBtn.disabled = true;
     if (!hasConfig && !enabled) {
       toggleBtn.textContent = msg("configureInSettings");
     } else if (enabled) {
@@ -303,6 +336,15 @@ if (serverSelectDropdown) {
     const opt = e.target.closest(".server-select-option");
     if (!opt) return;
     const idx = opt.dataset.index;
+    if (!incognitoAllowed) {
+      if (statusText)
+        statusText.textContent = msg(
+          "privateBrowsingRequired",
+          "Firefox: enable Private Browsing access for this extension.",
+        );
+      closeDropdown();
+      return;
+    }
     if (idx === "-1") {
       setSelectionDisplay(null);
       selectedIndex = -1;
@@ -424,6 +466,14 @@ if (optionsBtn) {
 
 if (toggleBtn) {
   toggleBtn.addEventListener("click", () => {
+    if (!incognitoAllowed) {
+      if (statusText)
+        statusText.textContent = msg(
+          "privateBrowsingRequired",
+          "Firefox: enable Private Browsing access for this extension.",
+        );
+      return;
+    }
     chrome.runtime.sendMessage({ action: "getState" }, (state) => {
       if (chrome.runtime.lastError) return;
       const nextEnabled = !state.enabled;

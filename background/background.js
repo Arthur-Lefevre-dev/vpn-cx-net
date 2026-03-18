@@ -90,6 +90,24 @@ const DEFAULT_CONFIG = {
   type: "socks5", // 'http' | 'socks4' | 'socks5' | 'openvpn'
 };
 
+/**
+ * Firefox requires Private Browsing permission for proxy.settings.set().
+ * Returns true for Chrome/others.
+ */
+async function isPrivateBrowsingAllowed() {
+  if (!IS_FIREFOX) return true;
+  try {
+    if (
+      typeof browser !== "undefined" &&
+      browser.extension &&
+      typeof browser.extension.isAllowedIncognitoAccess === "function"
+    ) {
+      return await browser.extension.isAllowedIncognitoAccess();
+    }
+  } catch (_) {}
+  return false;
+}
+
 // OpenVPN uses a local SOCKS5 proxy (e.g. from OpenVPN plugin or separate proxy)
 const PROXY_SCHEME_FOR_TYPE = {
   socks5: "socks5",
@@ -244,12 +262,19 @@ function loadAndApplyState() {
     (data) => {
       proxyCountryCode = normalizeCountryCode(data.proxyCountryCode);
       const config = { ...DEFAULT_CONFIG, ...data };
-      if (config.enabled && config.host && config.port) {
-        setProxyEnabled(true);
-        applyProxy(config);
-      } else {
-        clearProxy();
-      }
+      isPrivateBrowsingAllowed().then((allowed) => {
+        if (config.enabled && config.host && config.port) {
+          if (allowed) {
+            setProxyEnabled(true);
+            applyProxy(config).catch(() => {});
+          } else {
+            setProxyEnabled(false);
+          }
+        } else {
+          if (allowed) clearProxy().catch(() => {});
+          else setProxyEnabled(false);
+        }
+      });
     },
   );
 }
@@ -266,7 +291,10 @@ chrome.runtime.onStartup.addListener(() => {
     },
     () => {
       proxyAuth = { host: "", port: 0, username: "", password: "" };
-      clearProxy();
+      isPrivateBrowsingAllowed().then((allowed) => {
+        if (allowed) clearProxy().catch(() => {});
+        else setProxyEnabled(false);
+      });
     },
   );
 });
@@ -609,19 +637,36 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
   if (message.action === "getState") {
+    const incognitoAllowedPromise = isPrivateBrowsingAllowed();
     getServersSource().then(({ dedicatedServers, randomServers }) => {
       chrome.storage.local.get(
         ["enabled", "host", "port", "type", "proxyCountryCode", "isRandomConnection", "proxyUsername", "proxyPassword"],
         (data) => {
-          sendResponse({
-            ...DEFAULT_CONFIG,
-            ...data,
-            proxyCountryCode: normalizeCountryCode(data.proxyCountryCode),
-            dedicatedServers: dedicatedServers || [],
-            randomServers: randomServers || [],
-            isRandomConnection: !!data.isRandomConnection,
-            trafficStats: { ...trafficStats },
-          });
+          incognitoAllowedPromise
+            .then((incognitoAllowed) => {
+              sendResponse({
+                ...DEFAULT_CONFIG,
+                ...data,
+                proxyCountryCode: normalizeCountryCode(data.proxyCountryCode),
+                dedicatedServers: dedicatedServers || [],
+                randomServers: randomServers || [],
+                isRandomConnection: !!data.isRandomConnection,
+                incognitoAllowed: !!incognitoAllowed,
+                trafficStats: { ...trafficStats },
+              });
+            })
+            .catch(() => {
+              sendResponse({
+                ...DEFAULT_CONFIG,
+                ...data,
+                proxyCountryCode: normalizeCountryCode(data.proxyCountryCode),
+                dedicatedServers: dedicatedServers || [],
+                randomServers: randomServers || [],
+                isRandomConnection: !!data.isRandomConnection,
+                incognitoAllowed: false,
+                trafficStats: { ...trafficStats },
+              });
+            });
         },
       );
     });
@@ -633,45 +678,53 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const proxyUsername = username ?? "";
     const proxyPassword = password ?? "";
     proxyCountryCode = enabled && countryCode ? normalizeCountryCode(countryCode) : "";
-    chrome.storage.local.set(
-      {
-        enabled: !!enabled,
-        host: host ?? "",
-        port: port ?? DEFAULT_CONFIG.port,
-        type: type ?? DEFAULT_CONFIG.type,
-        proxyUsername,
-        proxyPassword,
-        proxyCountryCode: proxyCountryCode,
-        isRandomConnection: !!isRandomConnection,
-      },
-      () => {
-        if (enabled && host && port) {
-          proxyAuth = {
-            host,
-            port: port ?? DEFAULT_CONFIG.port,
-            username: proxyUsername,
-            password: proxyPassword,
-          };
-          setProxyEnabled(true);
-          Promise.resolve(
-            applyProxy({ host, port, type: type ?? DEFAULT_CONFIG.type }),
-          )
-            .then(() => sendResponse({ success: true }))
-            .catch((err) =>
-              sendResponse({ success: false, error: String(err) }),
-            );
-          return;
-        } else {
-          proxyAuth = { host: "", port: 0, username: "", password: "" };
-          Promise.resolve(clearProxy())
-            .then(() => sendResponse({ success: true }))
-            .catch((err) =>
-              sendResponse({ success: false, error: String(err) }),
-            );
+    isPrivateBrowsingAllowed()
+      .then((allowed) => {
+        if (!allowed) {
+          sendResponse({ success: false, error: "private_browsing_required" });
           return;
         }
-      },
-    );
+        chrome.storage.local.set(
+          {
+            enabled: !!enabled,
+            host: host ?? "",
+            port: port ?? DEFAULT_CONFIG.port,
+            type: type ?? DEFAULT_CONFIG.type,
+            proxyUsername,
+            proxyPassword,
+            proxyCountryCode: proxyCountryCode,
+            isRandomConnection: !!isRandomConnection,
+          },
+          () => {
+            if (enabled && host && port) {
+              proxyAuth = {
+                host,
+                port: port ?? DEFAULT_CONFIG.port,
+                username: proxyUsername,
+                password: proxyPassword,
+              };
+              setProxyEnabled(true);
+              Promise.resolve(
+                applyProxy({ host, port, type: type ?? DEFAULT_CONFIG.type }),
+              )
+                .then(() => sendResponse({ success: true }))
+                .catch((err) =>
+                  sendResponse({ success: false, error: String(err) }),
+                );
+              return;
+            } else {
+              proxyAuth = { host: "", port: 0, username: "", password: "" };
+              Promise.resolve(clearProxy())
+                .then(() => sendResponse({ success: true }))
+                .catch((err) =>
+                  sendResponse({ success: false, error: String(err) }),
+                );
+              return;
+            }
+          },
+        );
+      })
+      .catch((err) => sendResponse({ success: false, error: String(err) }));
     return true;
   }
   if (message.action === "openvpnNative") {

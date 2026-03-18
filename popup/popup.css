@@ -118,6 +118,15 @@ body {
   background: var(--text-muted);
 }
 
+.status.is-blocked {
+  border-color: rgba(239, 68, 68, 0.9);
+}
+
+.status.is-blocked .status-dot {
+  background: var(--error);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+}
+
 @keyframes statusSpin {
   from {
     transform: translate(-50%, -50%) rotate(0deg);
@@ -161,6 +170,30 @@ body {
 
 .status-text {
   font-weight: 500;
+}
+
+.private-browsing-steps-wrap {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius);
+}
+
+.private-browsing-steps-title {
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.private-browsing-steps-list {
+  margin-left: 18px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.private-browsing-steps-list li {
+  margin: 6px 0;
 }
 
 .current-country {

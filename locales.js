@@ -9,6 +9,13 @@
       loading: "Loading…",
       proxyActive: "Proxy active",
       proxyDisabled: "Proxy disabled",
+      privateBrowsingRequired:
+        "Firefox: enable Private Browsing access for this extension.",
+      privateBrowsingStepsTitle: "Enable Private Browsing (Firefox)",
+      privateBrowsingStep1: "Open about:addons",
+      privateBrowsingStep2: "Find “VPN CX NET” in Extensions",
+      privateBrowsingStep3:
+        "Turn on “Run in Private Windows” → set it to “Allow”",
       trafficDown: "↓ Download",
       trafficUp: "↑ Upload",
       trafficTotal: "Total",
@@ -52,6 +59,13 @@
       loading: "Chargement…",
       proxyActive: "Proxy actif",
       proxyDisabled: "Proxy désactivé",
+      privateBrowsingRequired:
+        "Firefox : autorisez l’accès en navigation privée pour cette extension.",
+      privateBrowsingStepsTitle: "Activer la navigation privée (Firefox)",
+      privateBrowsingStep1: "Ouvrez about:addons",
+      privateBrowsingStep2: "Trouvez “VPN CX NET” dans les extensions",
+      privateBrowsingStep3:
+        "Activez “Run in Private Windows” → mettez sur “Allow”",
       trafficDown: "↓ Descendant",
       trafficUp: "↑ Montant",
       trafficTotal: "Total",

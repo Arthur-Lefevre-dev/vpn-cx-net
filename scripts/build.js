@@ -2,9 +2,8 @@
 /**
  * Builds the extension for Chrome and Firefox.
  * Output: dist/vpn-cx-proxy-chrome.zip and dist/vpn-cx-proxy-firefox.zip
- * Root manifest: service_worker only (Chrome MV3 rejects scripts; Firefox 109+ supports service_worker for unpacked).
- * Chrome zip: same (service_worker only).
- * Firefox zip: manifest with background.scripts only (no service_worker) for AMO to avoid service_worker warning.
+ * Root manifest (manifest.json): Chrome MV3 (service_worker only).
+ * Firefox build: background.scripts (service_worker is not reliably supported/allowed).
  */
 
 const fs = require('fs');
@@ -18,6 +17,7 @@ const DIST_DIR = path.join(PROJECT_ROOT, 'dist');
 // Optional: icons/ (extension works without it; toolbar uses default placeholder).
 const INCLUDED = [
   'manifest.json',   // required by both browsers
+  'manifest.firefox.json', // Firefox-only manifest template (dev/build)
   'locales.js',      // i18n, loaded by popup and options
   'background',      // background/background.js (service_worker)
   'popup',           // popup/popup.html, popup.css, popup.js
@@ -60,10 +60,31 @@ function copyRecursive(src, dest) {
 
 function createZip(zipPath, buildDir) {
   return new Promise((resolve, reject) => {
-    const output = fs.createWriteStream(zipPath);
+    // Windows: if the destination zip exists and is locked (e.g. by Explorer/antivirus),
+    // writing directly can fail. We write to a temp file first.
+    const tmpPath = zipPath + '.tmp';
+    try {
+      if (fs.existsSync(zipPath)) fs.rmSync(zipPath, { force: true });
+    } catch (_) {}
+    try {
+      if (fs.existsSync(tmpPath)) fs.rmSync(tmpPath, { force: true });
+    } catch (_) {}
+
+    const output = fs.createWriteStream(tmpPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
-    output.on('close', () => resolve());
+    output.on('close', () => {
+      try {
+        fs.renameSync(tmpPath, zipPath);
+      } catch (e) {
+        // Cleanup temp if rename fails
+        try {
+          if (fs.existsSync(tmpPath)) fs.rmSync(tmpPath, { force: true });
+        } catch (_) {}
+        return reject(e);
+      }
+      resolve();
+    });
     output.on('error', reject);
     archive.on('error', reject);
 
@@ -104,7 +125,8 @@ function main() {
   const chromeBuildDir = path.join(DIST_DIR, 'build-chrome');
   const firefoxBuildDir = path.join(DIST_DIR, 'build-firefox');
 
-  const manifest = JSON.parse(fs.readFileSync(path.join(buildDir, 'manifest.json'), 'utf8'));
+  const chromeManifestTemplate = JSON.parse(fs.readFileSync(path.join(buildDir, 'manifest.json'), 'utf8'));
+  const firefoxManifestTemplate = JSON.parse(fs.readFileSync(path.join(buildDir, 'manifest.firefox.json'), 'utf8'));
 
   // Chrome (MV3): only service_worker allowed; scripts would trigger "requires manifest version 2 or lower"
   function createChromeBuildDir() {
@@ -113,26 +135,18 @@ function main() {
     for (const name of fs.readdirSync(buildDir)) {
       copyRecursive(path.join(buildDir, name), path.join(chromeBuildDir, name));
     }
-    const chromeManifest = JSON.parse(JSON.stringify(manifest));
-    if (chromeManifest.background) {
-      delete chromeManifest.background.scripts;
-      if (Object.keys(chromeManifest.background).length === 0) chromeManifest.background = { service_worker: 'background/background.js' };
-    }
+    const chromeManifest = JSON.parse(JSON.stringify(chromeManifestTemplate));
     fs.writeFileSync(path.join(chromeBuildDir, 'manifest.json'), JSON.stringify(chromeManifest, null, 2), 'utf8');
   }
 
-  // Firefox zip: scripts only (AMO expects scripts; service_worker can trigger warning)
+  // Firefox zip: scripts only
   function createFirefoxBuildDir() {
     if (fs.existsSync(firefoxBuildDir)) fs.rmSync(firefoxBuildDir, { recursive: true });
     ensureDir(firefoxBuildDir);
     for (const name of fs.readdirSync(buildDir)) {
       copyRecursive(path.join(buildDir, name), path.join(firefoxBuildDir, name));
     }
-    const firefoxManifest = JSON.parse(JSON.stringify(manifest));
-    if (firefoxManifest.background) {
-      delete firefoxManifest.background.service_worker;
-      firefoxManifest.background.scripts = ['background/background.js'];
-    }
+    const firefoxManifest = JSON.parse(JSON.stringify(firefoxManifestTemplate));
     fs.writeFileSync(path.join(firefoxBuildDir, 'manifest.json'), JSON.stringify(firefoxManifest, null, 2), 'utf8');
   }
 

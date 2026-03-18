@@ -4,7 +4,18 @@
  * Proxy auth: Chrome only, via webRequest.onAuthRequired + webRequestAuthProvider.
  */
 
-const proxyAPI = typeof browser !== "undefined" ? browser.proxy : chrome.proxy;
+// Firefox/MV3: the `browser` object is not always available depending on context.
+// More robust detection via UA + fallback on `browser.proxy`.
+const IS_FIREFOX =
+  (typeof navigator !== "undefined" &&
+    /firefox/i.test(navigator.userAgent || "")) ||
+  (typeof browser !== "undefined" && !!browser.proxy);
+
+const proxyAPI = IS_FIREFOX
+  ? // Firefox: prefer `browser.proxy` if available
+    (typeof browser !== "undefined" ? browser.proxy : chrome.proxy)
+  : // Chrome: use `chrome.proxy`
+    chrome.proxy;
 
 // In-memory proxy credentials for onAuthRequired (must respond synchronously)
 let proxyAuth = { host: "", port: 0, username: "", password: "" };
@@ -113,19 +124,23 @@ function getChromeProxyConfig(config) {
  * @returns {object}
  */
 function getFirefoxProxySettings(config) {
-  const address = `${config.host}:${config.port}`;
+  const host = config.host;
+  const port = parseInt(config.port, 10) || 0;
   const settings = {
     proxyType: "manual",
     passthrough: "localhost,127.0.0.1",
   };
   const effectiveType = config.type === "openvpn" ? "socks5" : config.type;
   if (effectiveType === "socks5" || effectiveType === "socks4") {
-    settings.socks = address;
+    // Firefox expects `socks` as a single string that may include the port.
+    settings.socks = host + ":" + port;
     settings.socksVersion = effectiveType === "socks5" ? 5 : 4;
     settings.proxyDNS = true;
   } else {
-    settings.http = address;
-    settings.ssl = address;
+    // For HTTP/HTTPS proxy, include the scheme (as in MDN examples).
+    const addr = "http://" + host + ":" + port;
+    settings.http = addr;
+    settings.ssl = addr;
   }
   return settings;
 }
@@ -141,9 +156,18 @@ function applyProxy(config) {
     return;
   }
   setProxyEnabled(true);
-  const isFirefox = typeof browser !== "undefined";
-  if (isFirefox) {
-    proxyAPI.settings.set({ value: getFirefoxProxySettings(config) });
+  if (IS_FIREFOX) {
+    try {
+      const p = proxyAPI.settings.set({ value: getFirefoxProxySettings(config) });
+      if (p && typeof p.catch === "function") {
+        p.catch((err) =>
+          console.error("Firefox proxy set failed:", err, config),
+        );
+      }
+      console.log("Firefox proxy set:", config, getFirefoxProxySettings(config));
+    } catch (err) {
+      console.error("Firefox proxy set threw:", err);
+    }
   } else {
     chrome.proxy.settings.set(
       {
@@ -164,8 +188,16 @@ function applyProxy(config) {
  */
 function clearProxy() {
   setProxyEnabled(false);
-  if (typeof browser !== "undefined") {
-    proxyAPI.settings.set({ value: { proxyType: "none" } });
+  if (IS_FIREFOX) {
+    try {
+      const p = proxyAPI.settings.set({ value: { proxyType: "none" } });
+      if (p && typeof p.catch === "function") {
+        p.catch((err) => console.error("Firefox proxy clear failed:", err));
+      }
+      console.log("Firefox proxy cleared");
+    } catch (err) {
+      console.error("Firefox proxy clear threw:", err);
+    }
   } else {
     chrome.proxy.settings.clear({ scope: "regular" }, () => {
       if (chrome.runtime.lastError) {
@@ -285,11 +317,7 @@ const webRequestAPI =
     : typeof browser !== "undefined"
       ? browser.webRequest
       : null;
-if (
-  webRequestAPI &&
-  webRequestAPI.onBeforeSendHeaders &&
-  typeof browser !== "undefined"
-) {
+if (IS_FIREFOX && webRequestAPI && webRequestAPI.onBeforeSendHeaders) {
   const extraInfoSpec = ["requestHeaders"];
   try {
     webRequestAPI.onBeforeSendHeaders.addListener(

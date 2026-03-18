@@ -135,6 +135,9 @@ function main() {
     for (const name of fs.readdirSync(buildDir)) {
       copyRecursive(path.join(buildDir, name), path.join(chromeBuildDir, name));
     }
+    // Keep the package unambiguous: only one manifest at root.
+    const firefoxManifestPath = path.join(chromeBuildDir, "manifest.firefox.json");
+    if (fs.existsSync(firefoxManifestPath)) fs.rmSync(firefoxManifestPath, { force: true });
     const chromeManifest = JSON.parse(JSON.stringify(chromeManifestTemplate));
     fs.writeFileSync(path.join(chromeBuildDir, 'manifest.json'), JSON.stringify(chromeManifest, null, 2), 'utf8');
   }
@@ -146,6 +149,9 @@ function main() {
     for (const name of fs.readdirSync(buildDir)) {
       copyRecursive(path.join(buildDir, name), path.join(firefoxBuildDir, name));
     }
+    // Keep the package unambiguous: only one manifest at root.
+    const firefoxManifestPath = path.join(firefoxBuildDir, "manifest.firefox.json");
+    if (fs.existsSync(firefoxManifestPath)) fs.rmSync(firefoxManifestPath, { force: true });
     const firefoxManifest = JSON.parse(JSON.stringify(firefoxManifestTemplate));
     fs.writeFileSync(path.join(firefoxBuildDir, 'manifest.json'), JSON.stringify(firefoxManifest, null, 2), 'utf8');
   }

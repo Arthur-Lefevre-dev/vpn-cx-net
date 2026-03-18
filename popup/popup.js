@@ -5,11 +5,6 @@
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
 const statusEl = document.getElementById("status");
-const privateBrowsingStepsWrap = document.getElementById("privateBrowsingStepsWrap");
-const privateBrowsingStepsTitle = document.getElementById("privateBrowsingStepsTitle");
-const pbStep1 = document.getElementById("pbStep1");
-const pbStep2 = document.getElementById("pbStep2");
-const pbStep3 = document.getElementById("pbStep3");
 const privateBrowsingOptionsLink = document.getElementById("privateBrowsingOptionsLink");
 const proxyInfo = document.getElementById("proxyInfo");
 const serverSelectWrap = document.getElementById("serverSelectWrap");
@@ -42,35 +37,6 @@ function copyTextToClipboard(text) {
     } catch (err) {
       reject(err);
     }
-  });
-}
-
-function bindAboutAddonsLink() {
-  if (!pbStep1) return;
-  const a = pbStep1.querySelector('a[href="about:addons"]');
-  if (!a) return;
-  if (a.dataset.bound === "1") return;
-  a.dataset.bound = "1";
-  a.addEventListener("click", (e) => {
-    e.preventDefault();
-    const url = "about:addons";
-    copyTextToClipboard(url)
-      .then(() => {
-        if (statusText)
-          statusText.textContent = msg(
-            "aboutAddonsCopied",
-            "about:addons copied",
-          );
-        if (statusEl) statusEl.classList.remove("is-blocked");
-        setTimeout(() => loadState(), 250);
-      })
-      .catch(() => {
-        if (statusText)
-          statusText.textContent = msg(
-            "aboutAddonsCopyFailed",
-            "Copy failed",
-          );
-      });
   });
 }
 
@@ -231,10 +197,6 @@ function renderState(state) {
       "privateBrowsingRequired",
       "Firefox: enable Private Browsing access for this extension."
     );
-  }
-  if (privateBrowsingStepsWrap) {
-    // Tutorial moved to the Options page.
-    privateBrowsingStepsWrap.hidden = true;
   }
   if (privateBrowsingOptionsLink) {
     privateBrowsingOptionsLink.hidden = incognitoAllowed;

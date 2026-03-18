@@ -86,24 +86,28 @@ function loadOptions() {
             privateBrowsingWarningText.textContent = t("privateBrowsingRequired");
           if (privateBrowsingWarningStep1)
             {
-              const step1 = t("privateBrowsingStep1");
-              // Fallback: if translation does not include the <a> tag,
-              // wrap "about:addons" into a clickable URL anyway.
-              privateBrowsingWarningStep1.innerHTML = step1.includes("about:addons")
-                ? step1.includes('<a ')
-                  ? step1
-                  : step1.replace(
-                      /about:addons/g,
-                      '<a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
-                    )
-                : step1;
+              // Ensure about:addons is a real clickable <a href="about:addons">.
+              // (Some environments can render the string as plain text.)
+              const step1Html = t("privateBrowsingStep1");
+              privateBrowsingWarningStep1.innerHTML = step1Html;
+
+              const existing = privateBrowsingWarningStep1.querySelector(
+                'a[href="about:addons"]',
+              );
+              if (!existing) {
+                privateBrowsingWarningStep1.innerHTML = step1Html.replace(
+                  /about:addons/g,
+                  '<a href="about:addons" target="_blank" rel="noopener noreferrer">about:addons</a>',
+                );
+              }
             }
           if (privateBrowsingWarningStep2)
             privateBrowsingWarningStep2.textContent = t("privateBrowsingStep2");
           if (privateBrowsingWarningStep3)
             privateBrowsingWarningStep3.textContent = t("privateBrowsingStep3");
 
-          // Clipboard backup: if Firefox blocks the about:* navigation, the user still has the URL.
+          // Clipboard backup: if Firefox blocks navigation to about:*,
+          // the user still gets the URL in clipboard.
           if (privateBrowsingWarningStep1) {
             const a = privateBrowsingWarningStep1.querySelector(
               'a[href="about:addons"]',
@@ -111,8 +115,15 @@ function loadOptions() {
             if (a && !a.dataset.bound) {
               a.dataset.bound = "1";
               a.addEventListener("click", (e) => {
-                // Backup copy: even if Firefox blocks the navigation,
-                // the user still gets "about:addons" in clipboard.
+                e.preventDefault();
+
+                // Try to open first (may be blocked by Firefox).
+                try {
+                  window.open("about:addons", "_blank", "noopener");
+                } catch {
+                  // Ignored: we still copy to clipboard below.
+                }
+
                 if (navigator.clipboard?.writeText) {
                   navigator.clipboard
                     .writeText("about:addons")

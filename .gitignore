@@ -1,4 +1,4 @@
 node_modules/
 *.xpi
 /data/*
-data.csv
+/data/data.csv

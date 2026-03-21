@@ -9,7 +9,8 @@
 - **Country list**: by default from `data/data.csv`; if a Decodo API key is set in Settings, the list is fetched from the [Decodo API](https://help.decodo.com/reference)
 - **Popup**: **Country** selector with flag icons (loaded from the web). No country is selected by default
 - **Persistence**: configuration and state (on/off) are saved
-- **Language**: English (default) and French; switch in the popup or in Settings
+- **Language**: English (default), French, German, Japanese, and Chinese (Simplified); switch in the popup or in Settings
+- **Terms of use**: shown on first launch (and when terms are updated); must be accepted to use the extension
 - **Compatibility**: Chrome (Manifest V3), Firefox 140+ (desktop), Firefox for Android 142+
 
 ## Installation
@@ -96,7 +97,7 @@ The build script produces two packages: the Chrome zip uses the root `manifest.j
 ```
 vpn-cx-net/
 ├── manifest.json       # Chrome manifest (Firefox zip gets a variant without service_worker)
-├── locales.js          # i18n (EN/FR)
+├── locales.js          # i18n (EN / FR / DE / JA / ZH)
 ├── background/         # Background script (proxy on/off, OpenVPN native)
 ├── popup/              # Popup (status, toggle, language, options link)
 ├── options/            # Settings page (OpenVPN, Decodo API key, language)
@@ -128,6 +129,12 @@ The extension works without custom icons. To add them:
 - **Chrome**: New extensions must use Manifest V3 to be published on the Chrome Web Store; V2 is deprecated.
 - **Firefox**: Supports MV3 from Firefox 109+ and requires it for signing/distribution on addons.mozilla.org in practice.
 - **Single codebase**: One codebase (background script) runs as a service worker on Chrome and as a background script on Firefox; the build script produces two zips with the appropriate manifest for each store.
+
+## Privacy
+
+See **[PRIVACY.md](./PRIVACY.md)** for a policy summary suitable for **GitHub** and **store submissions** (local extension data, third parties, and—when you use the operator’s proxy/VPN—**URL retention up to 30 days** in **anonymized** form for abuse prevention, **not** for ad profiling).
+
+The **full Terms of use** (including prohibited use and liability) are shown **inside the extension** in **EN / FR / DE / JA / ZH**.
 
 ## Permissions
 

@@ -21,6 +21,16 @@ const trafficUp = document.getElementById("trafficUp");
 const trafficTotal = document.getElementById("trafficTotal");
 const localeSelect = document.getElementById("localeSelect");
 
+const termsGate = document.getElementById("termsGate");
+const termsGateTitle = document.getElementById("termsGateTitle");
+const termsGateLead = document.getElementById("termsGateLead");
+const termsGateBody = document.getElementById("termsGateBody");
+const termsGateCheckbox = document.getElementById("termsGateCheckbox");
+const termsGateCheckboxLabel = document.getElementById("termsGateCheckboxLabel");
+const termsGateAccept = document.getElementById("termsGateAccept");
+const termsGateLocaleSelect = document.getElementById("termsGateLocaleSelect");
+const termsGateLocaleLabel = document.getElementById("termsGateLocaleLabel");
+
 // Link from the popup to the Options page (shown when Private Browsing is not allowed).
 if (privateBrowsingOptionsLink && chrome?.runtime?.getURL) {
   privateBrowsingOptionsLink.href = chrome.runtime.getURL(
@@ -32,6 +42,66 @@ if (privateBrowsingOptionsLink && chrome?.runtime?.getURL) {
 /** Safe i18n: use getMessage when locales.js is loaded, else fallback/key. */
 function msg(key, fallback) {
   return typeof getMessage !== "undefined" ? getMessage(key) : (fallback !== undefined ? fallback : key);
+}
+
+/** Persisted locale codes supported by locales.js */
+function normalizeLocaleCode(v) {
+  return v === "fr" || v === "de" || v === "ja" || v === "zh" ? v : "en";
+}
+
+/** Terms version from locales.js (bump there to re-prompt users). */
+function getTermsVersion() {
+  return typeof TERMS_OF_USE_VERSION !== "undefined"
+    ? TERMS_OF_USE_VERSION
+    : "1";
+}
+
+function isTermsAcceptedFromStorage(data) {
+  return !!(data && data.termsAcceptedVersion === getTermsVersion());
+}
+
+/** Max terms paragraphs from locales.js (termsP1…termsPn). */
+const TERMS_PARAGRAPH_COUNT = 6;
+
+/** Fill scrollable terms body with translated paragraphs. */
+function renderTermsParagraphs(container) {
+  if (!container || typeof getMessage === "undefined") return;
+  while (container.firstChild) container.removeChild(container.firstChild);
+  for (let i = 1; i <= TERMS_PARAGRAPH_COUNT; i++) {
+    const key = "termsP" + i;
+    const text = getMessage(key);
+    if (!text || text === key) continue;
+    const p = document.createElement("p");
+    p.className = "terms-para";
+    p.textContent = text;
+    container.appendChild(p);
+  }
+}
+
+function applyTermsGateLocale() {
+  if (typeof getMessage === "undefined") return;
+  if (termsGateTitle) termsGateTitle.textContent = getMessage("termsTitle");
+  if (termsGateLead) termsGateLead.textContent = getMessage("termsLead");
+  if (termsGateCheckboxLabel)
+    termsGateCheckboxLabel.textContent = getMessage("termsCheckboxLabel");
+  if (termsGateAccept) termsGateAccept.textContent = getMessage("termsAcceptBtn");
+  if (termsGateLocaleLabel)
+    termsGateLocaleLabel.textContent = getMessage("languageLabel");
+  renderTermsParagraphs(termsGateBody);
+}
+
+function showTermsGate() {
+  if (!termsGate) return;
+  termsGate.hidden = false;
+  if (termsGateCheckbox) termsGateCheckbox.checked = false;
+  if (termsGateAccept) termsGateAccept.disabled = true;
+  if (termsGateLocaleSelect && localeSelect)
+    termsGateLocaleSelect.value = localeSelect.value;
+  applyTermsGateLocale();
+}
+
+function hideTermsGate() {
+  if (termsGate) termsGate.hidden = true;
 }
 
 const PROXY_TYPE_LABELS = { openvpn: "OpenVPN", socks5: "SOCKS5", socks4: "SOCKS4", http: "HTTP" };
@@ -116,15 +186,16 @@ function setSelectionDisplay(serverOrNull) {
       currentCountryFlag.alt = serverOrNull && serverOrNull.isRandom ? "?" : "";
     }
   }
+  const randomLabel = msg("randomServer", "Random");
   if (currentCountryName)
     currentCountryName.textContent = serverOrNull
-      ? (serverOrNull.isRandom ? "Random" : countryName(serverOrNull))
+      ? (serverOrNull.isRandom ? randomLabel : countryName(serverOrNull))
       : "";
   if (serverSelectValue) {
     if (serverOrNull) {
       if (serverOrNull.isRandom) {
         serverSelectValue.appendChild(createRandomFlagSpan());
-        serverSelectValue.appendChild(document.createTextNode(" Random"));
+        serverSelectValue.appendChild(document.createTextNode(" " + randomLabel));
       } else {
         const code = serverCountryCode(serverOrNull);
         serverSelectValue.appendChild(createFlagImg(code));
@@ -159,9 +230,13 @@ function renderState(state) {
   const all = (state.dedicatedServers || []).slice();
   const localServers = all.filter((s) => !s.fromDecodo);
   const decodoServers = all.filter((s) => s.fromDecodo);
-  const servers = localServers
-    .sort((a, b) => countryName(a).localeCompare(countryName(b)))
-    .concat(decodoServers.sort((a, b) => countryName(a).localeCompare(countryName(b))));
+  const sortLocale =
+    typeof getCurrentLocale !== "undefined" ? getCurrentLocale() : "en";
+  const cmp = (a, b) =>
+    countryName(a).localeCompare(countryName(b), sortLocale, {
+      sensitivity: "base",
+    });
+  const servers = localServers.sort(cmp).concat(decodoServers.sort(cmp));
   currentServers = servers;
   currentRandomServers = state.randomServers || [];
 
@@ -257,7 +332,7 @@ function renderState(state) {
     if (decodo.length > 0) {
       const header = document.createElement("div");
       header.className = "server-select-section-label";
-      header.textContent = "Decodo API";
+      header.textContent = msg("decodoSectionTitle", "Decodo API");
       serverSelectDropdown.appendChild(header);
       decodo.forEach((s, i) => {
         const opt = document.createElement("button");
@@ -278,7 +353,9 @@ function renderState(state) {
       randomOpt.role = "option";
       randomOpt.dataset.index = RANDOM_INDEX;
       randomOpt.appendChild(createRandomFlagSpan());
-      randomOpt.appendChild(document.createTextNode(" Random"));
+      randomOpt.appendChild(
+        document.createTextNode(" " + msg("randomServer", "Random")),
+      );
       serverSelectDropdown.appendChild(randomOpt);
     }
   } else if (serverSelectWrap) {
@@ -449,6 +526,7 @@ function updateStaticLabels() {
   set("creditPrefix", "madeBy");
   if (statusText) statusText.textContent = getMessage("loading");
   if (localeSelect) localeSelect.setAttribute("aria-label", getMessage("languageLabel"));
+  applyTermsGateLocale();
 }
 
 if (optionsBtn) {
@@ -495,21 +573,57 @@ if (toggleBtn) {
   });
 }
 
+if (termsGateCheckbox && termsGateAccept) {
+  termsGateCheckbox.addEventListener("change", () => {
+    termsGateAccept.disabled = !termsGateCheckbox.checked;
+  });
+}
+
+if (termsGateAccept) {
+  termsGateAccept.addEventListener("click", () => {
+    if (!termsGateCheckbox || !termsGateCheckbox.checked) return;
+    chrome.storage.local.set({ termsAcceptedVersion: getTermsVersion() }, () => {
+      hideTermsGate();
+      loadState();
+      startTrafficRefresh();
+    });
+  });
+}
+
+if (termsGateLocaleSelect) {
+  termsGateLocaleSelect.addEventListener("change", () => {
+    const locale = normalizeLocaleCode(termsGateLocaleSelect.value);
+    chrome.storage.local.set({ locale }, () => {
+      if (typeof setLocale !== "undefined") setLocale(locale);
+      if (localeSelect) localeSelect.value = locale;
+      updateStaticLabels();
+      applyTermsGateLocale();
+    });
+  });
+}
+
 // Load locale from storage (default: en), then init UI and state
-chrome.storage.local.get(["locale"], (data) => {
-  const locale = data.locale === "fr" ? "fr" : "en";
+chrome.storage.local.get(["locale", "termsAcceptedVersion"], (data) => {
+  const locale = normalizeLocaleCode(data.locale);
   if (typeof setLocale !== "undefined") setLocale(locale);
   if (localeSelect) localeSelect.value = locale;
   updateStaticLabels();
+
+  if (!isTermsAcceptedFromStorage(data)) {
+    showTermsGate();
+    return;
+  }
+
   loadState();
   startTrafficRefresh();
 });
 
 if (localeSelect) {
   localeSelect.addEventListener("change", () => {
-    const locale = localeSelect.value === "fr" ? "fr" : "en";
+    const locale = normalizeLocaleCode(localeSelect.value);
     chrome.storage.local.set({ locale }, () => {
       if (typeof setLocale !== "undefined") setLocale(locale);
+      if (termsGateLocaleSelect) termsGateLocaleSelect.value = locale;
       updateStaticLabels();
       loadState();
     });

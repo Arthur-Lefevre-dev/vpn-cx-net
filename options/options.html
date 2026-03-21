@@ -7,6 +7,40 @@
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
+    <div
+      id="termsGate"
+      class="terms-gate"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="termsGateTitle"
+      hidden
+    >
+      <div class="terms-gate-panel terms-gate-panel--wide">
+        <h2 class="terms-gate-title" id="termsGateTitle"></h2>
+        <p class="terms-gate-lead" id="termsGateLead"></p>
+        <div class="terms-gate-lang">
+          <label for="termsGateLocaleSelect" id="termsGateLocaleLabel"></label>
+          <select id="termsGateLocaleSelect" class="locale-select">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="ja">日本語</option>
+            <option value="zh">中文（简体）</option>
+          </select>
+        </div>
+        <div class="terms-gate-scroll" id="termsGateBody"></div>
+        <label class="terms-gate-check">
+          <input type="checkbox" id="termsGateCheckbox" />
+          <span id="termsGateCheckboxLabel"></span>
+        </label>
+        <button
+          type="button"
+          id="termsGateAccept"
+          class="btn btn-primary terms-gate-accept"
+          disabled
+        ></button>
+      </div>
+    </div>
     <div class="page">
       <header class="header">
         <h1 id="optionsAppName">VPN CX Net</h1>
@@ -17,6 +51,9 @@
         <select id="localeSelect" class="locale-select">
           <option value="en">English</option>
           <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="ja">日本語</option>
+          <option value="zh">中文（简体）</option>
         </select>
       </section>
       <section
@@ -64,7 +101,8 @@
             autocomplete="off"
           />
           <p class="help" id="decodoApiKeyHelp">
-            If set, the popup also shows proxy servers from the Decodo API in addition to the default list.
+            If set, the popup also shows proxy servers from the Decodo API in
+            addition to the default list.
           </p>
           <p class="affiliation-link">
             <a
@@ -91,6 +129,37 @@
           <li id="privateBrowsingWarningStep2"></li>
           <li id="privateBrowsingWarningStep3"></li>
         </ol>
+        <!-- YouTube embed often fails in extension pages (Error 153). Open watch URL in a new tab instead. -->
+        <div class="private-browsing-video-wrap">
+          <p
+            class="private-browsing-video-caption"
+            id="privateBrowsingVideoCaption"
+          ></p>
+          <a
+            id="privateBrowsingYoutubeLink"
+            class="private-browsing-youtube-card"
+            href="https://www.youtube.com/watch?v=yRkpfEjUQU8"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              id="privateBrowsingYoutubeThumb"
+              class="private-browsing-youtube-thumb"
+              src="https://i.ytimg.com/vi/yRkpfEjUQU8/hqdefault.jpg"
+              alt=""
+              width="480"
+              height="360"
+              loading="lazy"
+            />
+            <span class="private-browsing-youtube-play" aria-hidden="true"
+              >▶</span
+            >
+            <span
+              class="private-browsing-youtube-cta"
+              id="privateBrowsingYoutubeCta"
+            ></span>
+          </a>
+        </div>
       </section>
       <p
         id="message"

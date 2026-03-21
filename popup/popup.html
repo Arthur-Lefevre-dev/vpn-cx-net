@@ -7,6 +7,40 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
+    <div
+      id="termsGate"
+      class="terms-gate"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="termsGateTitle"
+      hidden
+    >
+      <div class="terms-gate-panel">
+        <h2 class="terms-gate-title" id="termsGateTitle"></h2>
+        <p class="terms-gate-lead" id="termsGateLead"></p>
+        <div class="terms-gate-lang">
+          <label for="termsGateLocaleSelect" id="termsGateLocaleLabel"></label>
+          <select id="termsGateLocaleSelect" class="locale-select">
+            <option value="en">EN</option>
+            <option value="fr">FR</option>
+            <option value="de">DE</option>
+            <option value="ja">JA</option>
+            <option value="zh">中文</option>
+          </select>
+        </div>
+        <div class="terms-gate-scroll" id="termsGateBody"></div>
+        <label class="terms-gate-check">
+          <input type="checkbox" id="termsGateCheckbox" />
+          <span id="termsGateCheckboxLabel"></span>
+        </label>
+        <button
+          type="button"
+          id="termsGateAccept"
+          class="btn btn-primary terms-gate-accept"
+          disabled
+        ></button>
+      </div>
+    </div>
     <div class="container">
       <header class="header">
         <span class="logo" aria-hidden="true">🔒</span>
@@ -18,6 +52,9 @@
           <select id="localeSelect" class="locale-select" aria-label="Language">
             <option value="en">EN</option>
             <option value="fr">FR</option>
+            <option value="de">DE</option>
+            <option value="ja">JA</option>
+            <option value="zh">中文</option>
           </select>
         </div>
       </header>

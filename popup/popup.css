@@ -23,7 +23,12 @@
 body {
   width: 320px;
   min-height: 200px;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family:
+    "Segoe UI",
+    system-ui,
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
   font-size: 14px;
   color: var(--text);
   background: var(--bg);
@@ -498,4 +503,97 @@ body {
   display: block;
   border-radius: 6px;
   margin: 0 auto;
+}
+
+/* First-run terms of use overlay */
+.terms-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(10, 10, 14, 0.94);
+  overflow-y: auto;
+}
+
+.terms-gate[hidden] {
+  display: none !important;
+}
+
+.terms-gate-panel {
+  width: 100%;
+  max-height: min(92vh, 520px);
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.terms-gate-title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.terms-gate-lead {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.terms-gate-lang {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.terms-gate-lang label {
+  color: var(--text-muted);
+}
+
+.terms-gate-scroll {
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.terms-gate-scroll .terms-para {
+  margin-bottom: 8px;
+}
+
+.terms-gate-scroll .terms-para:last-child {
+  margin-bottom: 0;
+}
+
+.terms-gate-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.terms-gate-check input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.terms-gate-accept {
+  width: 100%;
+  margin-top: 2px;
 }

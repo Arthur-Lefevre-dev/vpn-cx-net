@@ -9,15 +9,103 @@ const openvpnStatus = document.getElementById("openvpnStatus");
 const decodoApiKeyInput = document.getElementById("decodoApiKey");
 const messageEl = document.getElementById("message");
 const localeSelect = document.getElementById("localeSelect");
-const privateBrowsingWarningWrap = document.getElementById("privateBrowsingWarningWrap");
-const privateBrowsingWarningTitle = document.getElementById("privateBrowsingWarningTitle");
-const privateBrowsingWarningText = document.getElementById("privateBrowsingWarningText");
-const privateBrowsingWarningStep1 = document.getElementById("privateBrowsingWarningStep1");
-const privateBrowsingWarningStep2 = document.getElementById("privateBrowsingWarningStep2");
-const privateBrowsingWarningStep3 = document.getElementById("privateBrowsingWarningStep3");
+const privateBrowsingWarningWrap = document.getElementById(
+  "privateBrowsingWarningWrap",
+);
+const privateBrowsingWarningTitle = document.getElementById(
+  "privateBrowsingWarningTitle",
+);
+const privateBrowsingWarningText = document.getElementById(
+  "privateBrowsingWarningText",
+);
+const privateBrowsingWarningStep1 = document.getElementById(
+  "privateBrowsingWarningStep1",
+);
+const privateBrowsingWarningStep2 = document.getElementById(
+  "privateBrowsingWarningStep2",
+);
+const privateBrowsingWarningStep3 = document.getElementById(
+  "privateBrowsingWarningStep3",
+);
+const privateBrowsingVideoCaption = document.getElementById(
+  "privateBrowsingVideoCaption",
+);
+const privateBrowsingYoutubeCta = document.getElementById(
+  "privateBrowsingYoutubeCta",
+);
+const privateBrowsingYoutubeThumb = document.getElementById(
+  "privateBrowsingYoutubeThumb",
+);
+
+const termsGate = document.getElementById("termsGate");
+const termsGateTitle = document.getElementById("termsGateTitle");
+const termsGateLead = document.getElementById("termsGateLead");
+const termsGateBody = document.getElementById("termsGateBody");
+const termsGateCheckbox = document.getElementById("termsGateCheckbox");
+const termsGateCheckboxLabel = document.getElementById("termsGateCheckboxLabel");
+const termsGateAccept = document.getElementById("termsGateAccept");
+const termsGateLocaleSelect = document.getElementById("termsGateLocaleSelect");
+const termsGateLocaleLabel = document.getElementById("termsGateLocaleLabel");
 
 /** Safe i18n (locales.js loaded before options.js). */
 const t = typeof getMessage !== "undefined" ? getMessage : (k) => k;
+
+function normalizeLocaleCode(v) {
+  return v === "fr" || v === "de" || v === "ja" || v === "zh" ? v : "en";
+}
+
+function getTermsVersion() {
+  return typeof TERMS_OF_USE_VERSION !== "undefined"
+    ? TERMS_OF_USE_VERSION
+    : "1";
+}
+
+function isTermsAcceptedFromStorage(data) {
+  return !!(data && data.termsAcceptedVersion === getTermsVersion());
+}
+
+/** Max terms paragraphs from locales.js (termsP1…termsPn). */
+const TERMS_PARAGRAPH_COUNT = 6;
+
+function renderTermsParagraphs(container) {
+  if (!container || typeof getMessage === "undefined") return;
+  while (container.firstChild) container.removeChild(container.firstChild);
+  for (let i = 1; i <= TERMS_PARAGRAPH_COUNT; i++) {
+    const key = "termsP" + i;
+    const text = getMessage(key);
+    if (!text || text === key) continue;
+    const p = document.createElement("p");
+    p.className = "terms-para";
+    p.textContent = text;
+    container.appendChild(p);
+  }
+}
+
+function applyTermsGateLocale() {
+  if (typeof getMessage === "undefined") return;
+  if (termsGateTitle) termsGateTitle.textContent = getMessage("termsTitle");
+  if (termsGateLead) termsGateLead.textContent = getMessage("termsLead");
+  if (termsGateCheckboxLabel)
+    termsGateCheckboxLabel.textContent = getMessage("termsCheckboxLabel");
+  if (termsGateAccept) termsGateAccept.textContent = getMessage("termsAcceptBtn");
+  if (termsGateLocaleLabel)
+    termsGateLocaleLabel.textContent = getMessage("languageLabel");
+  renderTermsParagraphs(termsGateBody);
+}
+
+function showTermsGate() {
+  if (!termsGate) return;
+  termsGate.hidden = false;
+  if (termsGateCheckbox) termsGateCheckbox.checked = false;
+  if (termsGateAccept) termsGateAccept.disabled = true;
+  if (termsGateLocaleSelect && localeSelect)
+    termsGateLocaleSelect.value = localeSelect.value;
+  applyTermsGateLocale();
+}
+
+function hideTermsGate() {
+  if (termsGate) termsGate.hidden = true;
+}
 
 function showMessage(text, type) {
   if (messageEl) {
@@ -46,7 +134,8 @@ function renderAboutAddonsStep(stepEl, stepRaw) {
   if (!stepEl) return;
   const raw = (stepRaw || "").toString();
 
-  const anchorTagRe = /<a[^>]*href=["']about:addons["'][^>]*>\s*about:addons\s*<\/a>/i;
+  const anchorTagRe =
+    /<a[^>]*href=["']about:addons["'][^>]*>\s*about:addons\s*<\/a>/i;
   const m = raw.match(anchorTagRe);
 
   let prefixRaw = "";
@@ -128,6 +217,7 @@ function applyLocale() {
   if (openvpnStartBtn) openvpnStartBtn.textContent = getMessage("openvpnStart");
   if (openvpnStopBtn) openvpnStopBtn.textContent = getMessage("openvpnStop");
   document.title = getMessage("settingsTitle");
+  applyTermsGateLocale();
 }
 
 function updatePrivateBrowsingWarning() {
@@ -137,7 +227,9 @@ function updatePrivateBrowsingWarning() {
     privateBrowsingWarningWrap.hidden = incognitoAllowed;
     if (!incognitoAllowed) {
       if (privateBrowsingWarningTitle)
-        privateBrowsingWarningTitle.textContent = t("privateBrowsingStepsTitle");
+        privateBrowsingWarningTitle.textContent = t(
+          "privateBrowsingStepsTitle",
+        );
       if (privateBrowsingWarningText)
         privateBrowsingWarningText.textContent = t("privateBrowsingRequired");
       if (privateBrowsingWarningStep1)
@@ -149,19 +241,41 @@ function updatePrivateBrowsingWarning() {
         privateBrowsingWarningStep2.textContent = t("privateBrowsingStep2");
       if (privateBrowsingWarningStep3)
         privateBrowsingWarningStep3.textContent = t("privateBrowsingStep3");
+      if (privateBrowsingVideoCaption)
+        privateBrowsingVideoCaption.textContent = t(
+          "privateBrowsingVideoCaption",
+        );
+      if (privateBrowsingYoutubeCta)
+        privateBrowsingYoutubeCta.textContent = t(
+          "privateBrowsingWatchOnYoutube",
+        );
+      if (privateBrowsingYoutubeThumb)
+        privateBrowsingYoutubeThumb.alt = t("privateBrowsingVideoThumbAlt");
     }
   });
 }
 
 function loadOptions() {
-  chrome.storage.local.get(["ovpnPath", "decodoApiKey", "locale"], (data) => {
-    if (ovpnPathInput) ovpnPathInput.value = data.ovpnPath || "";
-    if (decodoApiKeyInput) decodoApiKeyInput.value = data.decodoApiKey || "";
-    if (typeof setLocale !== "undefined") setLocale(data.locale || "en");
-    applyLocale();
-    if (localeSelect) localeSelect.value = data.locale === "fr" ? "fr" : "en";
-    updatePrivateBrowsingWarning();
-  });
+  chrome.storage.local.get(
+    ["ovpnPath", "decodoApiKey", "locale", "termsAcceptedVersion"],
+    (data) => {
+      if (ovpnPathInput) ovpnPathInput.value = data.ovpnPath || "";
+      if (decodoApiKeyInput) decodoApiKeyInput.value = data.decodoApiKey || "";
+      const locale = normalizeLocaleCode(data.locale);
+      if (typeof setLocale !== "undefined") setLocale(locale);
+      applyLocale();
+      if (localeSelect) localeSelect.value = locale;
+      if (termsGateLocaleSelect) termsGateLocaleSelect.value = locale;
+
+      if (!isTermsAcceptedFromStorage(data)) {
+        showTermsGate();
+      } else {
+        hideTermsGate();
+      }
+
+      updatePrivateBrowsingWarning();
+    },
+  );
 }
 
 if (openvpnStartBtn) {
@@ -229,9 +343,37 @@ if (decodoApiKeyInput) {
 
 if (localeSelect) {
   localeSelect.addEventListener("change", () => {
-    const locale = localeSelect.value === "fr" ? "fr" : "en";
+    const locale = normalizeLocaleCode(localeSelect.value);
     chrome.storage.local.set({ locale }, () => {
       if (typeof setLocale !== "undefined") setLocale(locale);
+      if (termsGateLocaleSelect) termsGateLocaleSelect.value = locale;
+      applyLocale();
+      updatePrivateBrowsingWarning();
+    });
+  });
+}
+
+if (termsGateCheckbox && termsGateAccept) {
+  termsGateCheckbox.addEventListener("change", () => {
+    termsGateAccept.disabled = !termsGateCheckbox.checked;
+  });
+}
+
+if (termsGateAccept) {
+  termsGateAccept.addEventListener("click", () => {
+    if (!termsGateCheckbox || !termsGateCheckbox.checked) return;
+    chrome.storage.local.set({ termsAcceptedVersion: getTermsVersion() }, () => {
+      hideTermsGate();
+    });
+  });
+}
+
+if (termsGateLocaleSelect) {
+  termsGateLocaleSelect.addEventListener("change", () => {
+    const locale = normalizeLocaleCode(termsGateLocaleSelect.value);
+    chrome.storage.local.set({ locale }, () => {
+      if (typeof setLocale !== "undefined") setLocale(locale);
+      if (localeSelect) localeSelect.value = locale;
       applyLocale();
       updatePrivateBrowsingWarning();
     });

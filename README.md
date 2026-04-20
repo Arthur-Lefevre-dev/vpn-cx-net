@@ -5,7 +5,8 @@
 ## Features
 
 - **Enable/disable** the proxy with one click from the toolbar
-- **Settings**: **OpenVPN** only (path to .ovpn file, start/stop) + optional **Decodo API key** to load the country list from the API
+- **Blocked domains (publisher)**: edit **`data/blocked-domains.json`** before building; listed hostnames are blocked **only while the proxy is enabled** in the toolbar (see below)
+- **Settings**: **OpenVPN** (path to .ovpn file, start/stop) + optional **Decodo API key** to load the country list from the API
 - **Country list**: by default from `data/data.csv`; if a Decodo API key is set in Settings, the list is fetched from the [Decodo API](https://help.decodo.com/reference)
 - **Popup**: **Country** selector with flag icons (loaded from the web). No country is selected by default
 - **Persistence**: configuration and state (on/off) are saved
@@ -64,6 +65,29 @@ isp.decodo.com:10003:user-sp1rg83e7n-country-fr:laZqb7S~4bo8yJp6Eq
 
 **Decodo API**: in Settings, optional “Decodo API key” field. If set, the country list is loaded from the Decodo API instead of `data/data.csv`.
 
+### Blocked domains for your users (`data/blocked-domains.json`)
+
+The extension reads **`data/blocked-domains.json`** from the package at startup (not configurable in the UI). **Edit this file before you build** and publish to the stores so every user of your extension gets the same blocklist. **Blocking is active only when the proxy is turned on** in the extension popup; if the proxy is disabled, those domains are not blocked.
+
+Supported JSON shapes:
+
+```json
+{
+  "version": 1,
+  "domains": ["example.com", "doubleclick.net"]
+}
+```
+
+or a root array:
+
+```json
+["example.com", "doubleclick.net"]
+```
+
+**Valid JSON**: each domain must be a **quoted string** (`"youtube.com"`, not `youtube.com`). Invalid JSON is ignored; check the extension **service worker / background** console for parse errors.
+
+You may use the property names **`domains`**, **`blockedDomains`**, or **`hosts`** (object form). Subdomains are blocked too (e.g. `example.com` also blocks `www.example.com`). Up to **400** hostnames are applied.
+
 ### Using OpenVPN
 
 - **Without native host**: choose **OpenVPN (local proxy)** in Settings, then enter the address and port of the local proxy (often `127.0.0.1` and `1080`) exposed by your OpenVPN client or a SOCKS service. Save and enable the proxy in the popup.
@@ -101,7 +125,7 @@ vpn-cx-net/
 ├── background/         # Background script (proxy on/off, OpenVPN native)
 ├── popup/              # Popup (status, toggle, language, options link)
 ├── options/            # Settings page (OpenVPN, Decodo API key, language)
-├── data/               # data.csv (default server list)
+├── data/               # data.csv + blocked-domains.json (publisher blocklist)
 ├── icons/              # Extension icons (optional)
 ├── native/             # Native host to start/stop OpenVPN (separate install)
 ├── scripts/            # Scripts (build, icons, install native host)
@@ -132,7 +156,7 @@ The extension works without custom icons. To add them:
 
 ## Privacy
 
-See **[PRIVACY.md](./PRIVACY.md)** for a policy summary suitable for **GitHub** and **store submissions** (local extension data, third parties, and—when you use the operator’s proxy/VPN—**URL retention up to 30 days** in **anonymized** form for abuse prevention, **not** for ad profiling).
+See **[PRIVACY.md](./PRIVACY.md)** for a policy summary suitable for **GitHub** and **store submissions** (local extension data, third parties, publisher **blocklist** shipped in `data/blocked-domains.json`, and—when you use the operator’s proxy/VPN—**URL retention up to 30 days** in **anonymized** form for abuse prevention, **not** for ad profiling).
 
 The **full Terms of use** (including prohibited use and liability) are shown **inside the extension** in **EN / FR / DE / JA / ZH**.
 

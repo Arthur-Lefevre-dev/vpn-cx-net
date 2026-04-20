@@ -19,6 +19,7 @@ The extension uses the browser’s **local storage** (`chrome.storage` / `browse
 
 - Proxy on/off state and selected server settings (host, port, type, credentials as needed for the proxy)
 - Optional: path to your OpenVPN config, optional Decodo API key, UI language, acceptance of the terms of use version
+- **Publisher blocklist**: if the **publisher** ships a `data/blocked-domains.json` in the package, those hostnames may be blocked in the browser **while the user has the extension’s proxy enabled**; the list is bundled with the install (not fetched from your servers by default)
 
 This data **stays on your device** and is **not** sent to the extension developers by default, except where you explicitly use features that contact third-party APIs (see section 5).
 

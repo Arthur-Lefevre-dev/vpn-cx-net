@@ -337,11 +337,151 @@ chrome.storage.local.get(
 // When proxy is enabled, set User-Agent (Windows) and Accept-Language to match proxy region.
 // Chrome MV3: use declarativeNetRequest (webRequest cannot modify headers in MV3).
 // Firefox: use webRequest.onBeforeSendHeaders.
+// Blocked domains (when proxy on): Chrome DNR block rules; Firefox webRequest.onBeforeRequest (blocking).
 const WINDOWS_UA_RULE_ID = 1;
+const BLOCK_RULE_ID_START = 100;
+const MAX_BLOCKED_DOMAINS = 400;
 const DNR_RESOURCE_TYPES = [
   "main_frame", "sub_frame", "xmlhttprequest", "script", "stylesheet",
   "image", "font", "object", "ping", "csp_report", "media", "websocket", "other",
 ];
+
+/** @type {string[]} */
+let blockedDomainsList = [];
+let previousBlockRuleCount = 0;
+
+/** @type {string[]} copy for Firefox onBeforeRequest */
+let firefoxBlockedDomains = [];
+
+/**
+ * Normalize domain list entries (from JSON array or string lines).
+ * @param {unknown} raw
+ * @returns {string[]}
+ */
+function normalizeBlockedDomainsArray(raw) {
+  /** @type {string[]} */
+  let lines = [];
+  if (Array.isArray(raw)) {
+    lines = raw.map((x) => String(x));
+  } else if (typeof raw === "string") {
+    lines = raw.split(/[\r\n,;]+/);
+  } else {
+    return [];
+  }
+  const seen = new Set();
+  const out = [];
+  for (const line of lines) {
+    const domain = normalizeSingleDomain(line);
+    if (!domain || seen.has(domain)) continue;
+    seen.add(domain);
+    if (out.length >= MAX_BLOCKED_DOMAINS) break;
+    out.push(domain);
+  }
+  return out;
+}
+
+/**
+ * @param {string} s
+ * @returns {string}
+ */
+function normalizeSingleDomain(s) {
+  let t = (s || "").trim().toLowerCase();
+  if (!t) return "";
+  t = t.replace(/^\*\./, "");
+  if (t.includes("://")) {
+    try {
+      const u = new URL(t.startsWith("http://") || t.startsWith("https://") ? t : "https://" + t);
+      t = u.hostname;
+    } catch {
+      return "";
+    }
+  } else {
+    t = t.split("/")[0].split(":")[0];
+  }
+  if (!t || /\s/.test(t)) return "";
+  while (t.endsWith(".")) t = t.slice(0, -1);
+  return t;
+}
+
+/**
+ * @param {string} hostname
+ * @param {string} domain
+ * @returns {boolean}
+ */
+function hostnameMatchesBlockedDomain(hostname, domain) {
+  const h = (hostname || "").toLowerCase();
+  const d = (domain || "").toLowerCase();
+  return h === d || h.endsWith("." + d);
+}
+
+function applyBlockedDomainsList(list) {
+  blockedDomainsList = list;
+  firefoxBlockedDomains = list.slice();
+  syncChromeAllDynamicRules();
+}
+
+/**
+ * Parse packaged data/blocked-domains.json: root array or { "domains": [...] }.
+ * @param {unknown} json
+ * @returns {string[]}
+ */
+function parseBlockedDomainsJsonPayload(json) {
+  if (Array.isArray(json)) {
+    return normalizeBlockedDomainsArray(json);
+  }
+  if (json && typeof json === "object") {
+    const o = /** @type {{ domains?: unknown; blockedDomains?: unknown; hosts?: unknown }} */ (
+      json
+    );
+    const arr = o.domains ?? o.blockedDomains ?? o.hosts;
+    if (Array.isArray(arr)) return normalizeBlockedDomainsArray(arr);
+  }
+  return [];
+}
+
+/**
+ * Adblock-style urlFilter for Chrome DNR (||host^ matches host and subdomains).
+ * @param {string} domain normalized hostname (ASCII labels only)
+ * @returns {string}
+ */
+function blockUrlFilterForDomain(domain) {
+  if (!domain) return "";
+  // Only escape chars special in DNR urlFilter: | * ^
+  const safe = domain.replace(/[|^*]/g, "\\$&");
+  return "||" + safe + "^";
+}
+
+/**
+ * Load publisher blocklist from extension package (edit file before build).
+ * JSON must use quoted strings for domains, e.g. ["a.com","b.com"].
+ */
+function loadBlockedDomainsFromPackagedJson() {
+  const url = chrome.runtime.getURL("data/blocked-domains.json");
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error("blocked-domains.json HTTP " + r.status);
+      return r.text();
+    })
+    .then((text) => {
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error(
+          "VPN CX Net: data/blocked-domains.json is invalid JSON. Use quoted strings for domains, e.g. [\"bad.com\"].",
+          e,
+        );
+        applyBlockedDomainsList([]);
+        return;
+      }
+      const list = parseBlockedDomainsJsonPayload(data);
+      applyBlockedDomainsList(list);
+    })
+    .catch((err) => {
+      console.error("VPN CX Net: could not load blocked-domains.json", err);
+      applyBlockedDomainsList([]);
+    });
+}
 
 function buildRegionHeaders() {
   const { userAgent, acceptLanguage } = getRegionHeaderValues();
@@ -358,26 +498,72 @@ function getRegionHeaderValues() {
   };
 }
 
-function applyWindowsUserAgentRule(enable) {
+/**
+ * Chrome MV3: UA modifyHeaders when proxy on; domain block rules only when proxy on.
+ */
+function syncChromeAllDynamicRules() {
   if (typeof chrome === "undefined" || !chrome.declarativeNetRequest) return;
-  const requestHeaders = buildRegionHeaders();
-  const rule = {
-    id: WINDOWS_UA_RULE_ID,
-    priority: 1,
-    action: { type: "modifyHeaders", requestHeaders },
-    condition: { regexFilter: ".*", resourceTypes: DNR_RESOURCE_TYPES },
-  };
-  chrome.declarativeNetRequest.updateDynamicRules({
-    removeRuleIds: [WINDOWS_UA_RULE_ID],
-    addRules: enable ? [rule] : [],
-  });
+
+  const removeRuleIds = [WINDOWS_UA_RULE_ID];
+  for (let i = 0; i < previousBlockRuleCount; i++) {
+    removeRuleIds.push(BLOCK_RULE_ID_START + i);
+  }
+
+  const addRules = [];
+  if (proxyEnabled) {
+    addRules.push({
+      id: WINDOWS_UA_RULE_ID,
+      priority: 1,
+      action: { type: "modifyHeaders", requestHeaders: buildRegionHeaders() },
+      condition: { regexFilter: ".*", resourceTypes: DNR_RESOURCE_TYPES },
+    });
+  }
+
+  let blockRuleCount = 0;
+  if (proxyEnabled) {
+    const n = Math.min(blockedDomainsList.length, MAX_BLOCKED_DOMAINS);
+    for (let idx = 0; idx < n; idx++) {
+      const domain = blockedDomainsList[idx];
+      const urlFilter = blockUrlFilterForDomain(domain);
+      if (!urlFilter) continue;
+      addRules.push({
+        id: BLOCK_RULE_ID_START + blockRuleCount,
+        priority: 3,
+        action: { type: "block" },
+        condition: {
+          urlFilter,
+          resourceTypes: DNR_RESOURCE_TYPES,
+        },
+      });
+      blockRuleCount += 1;
+    }
+  }
+  previousBlockRuleCount = blockRuleCount;
+
+  try {
+    chrome.declarativeNetRequest.updateDynamicRules(
+      {
+        removeRuleIds,
+        addRules,
+      },
+      () => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          console.error(
+            "VPN CX Net: declarativeNetRequest.updateDynamicRules",
+            err.message,
+          );
+        }
+      },
+    );
+  } catch (err) {
+    console.error("declarativeNetRequest.updateDynamicRules failed:", err);
+  }
 }
 
 function setProxyEnabled(enabled) {
   proxyEnabled = !!enabled;
-  if (typeof chrome !== "undefined" && chrome.declarativeNetRequest) {
-    applyWindowsUserAgentRule(proxyEnabled);
-  }
+  syncChromeAllDynamicRules();
 }
 
 // Firefox: modify User-Agent and Accept-Language via webRequest (Chrome uses declarativeNetRequest above)
@@ -406,6 +592,32 @@ if (IS_FIREFOX && webRequestAPI && webRequestAPI.onBeforeSendHeaders) {
       extraInfoSpec,
     );
   } catch (_) {}
+}
+
+// Firefox: block requests to user-listed domains (Chrome uses declarativeNetRequest rules above).
+if (IS_FIREFOX && webRequestAPI && webRequestAPI.onBeforeRequest) {
+  try {
+    webRequestAPI.onBeforeRequest.addListener(
+      (details) => {
+        if (!proxyEnabled || !firefoxBlockedDomains.length) return;
+        let hostname;
+        try {
+          hostname = new URL(details.url).hostname.toLowerCase();
+        } catch {
+          return;
+        }
+        for (let i = 0; i < firefoxBlockedDomains.length; i++) {
+          if (hostnameMatchesBlockedDomain(hostname, firefoxBlockedDomains[i])) {
+            return { cancel: true };
+          }
+        }
+      },
+      { urls: ["<all_urls>"] },
+      ["blocking"],
+    );
+  } catch (e) {
+    console.warn("onBeforeRequest block list not registered:", e);
+  }
 }
 
 // Track download size from response Content-Length (when proxy is used)
@@ -778,6 +990,8 @@ async function handleSetState(payload, sendResponse) {
     sendResponse({ success: false, error: String(err) });
   }
 }
+
+loadBlockedDomainsFromPackagedJson();
 
 // Listen for messages from popup/options to toggle or update proxy
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
